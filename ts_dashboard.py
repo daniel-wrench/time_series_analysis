@@ -10,7 +10,10 @@ import plotly.graph_objects as go
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
-from scipy import signal, fft
+from scipy import fft
+from remove_data import remove_data
+from astropy import timeseries
+
 
 sb.set()
 
@@ -47,22 +50,6 @@ def simulate_stochastic_processes():
     bm = np.cumsum(wn)
     return wn, bm
 
-@st.cache
-def calculate_stats(missing, removal_type):
-    # Calculate FT
-    N = len(x)
-    T = 1/x_freq
-    freqs_positive = fft.fftfreq(N, T)[:N//2]
-    ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
-    power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
-
-    # Calculate ACF
-    acf = sm.tsa.acf(x, nlags=len(x))
-
-    sfn = calc_sfn(pd.Series(x), [2], 1, 0.9999)
-
-    return freqs_positive, power_ft, acf, sfn
-
 ########################################################################
 
 datasets = ["White noise", "Brownian motion", "Solar wind magnetic field (PSP)"]
@@ -85,35 +72,89 @@ st.write("You have selected ", dataset, " with ", missing, "% removed ", str.low
 x = dset.data[dataset]
 x_freq = dset.freq[dataset]
 
-freqs_positive, power_ft, acf, sfn = calculate_stats(missing, removal_type)
+@st.cache
+def calculate_stats():
 
-########
+    # Calculate FT
+    N = len(x)
+    T = 1/x_freq
+    freqs_positive = fft.fftfreq(N, T)[:N//2]
+    # ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
+    # power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
+
+    # Removing any NA values - leads to clean but un-evenly sampled data for LS method
+    power_ft = timeseries.LombScargle(np.arange(N)/x_freq, x, normalization="psd").power(freqs_positive[1:])
+
+    # Calculate ACF
+    acf = sm.tsa.acf(x, nlags=len(x), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
+    
+    # Calculate SF
+    sfn = calc_sfn(pd.Series(x), [2], 1, 0.9999)
+
+    return freqs_positive, power_ft, acf, sfn["2"].values
+
+@st.cache
+def calculate_missing_stats(missing, removal_type):
+
+    if removal_type == "In chunks":
+        x_bad, prop_removed = remove_data(x, missing/100, chunks = 10, sigma = 0.1)
+    elif removal_type == "Uniformly": 
+        x_bad, prop_removed = remove_data(x, missing/100)
+
+    # Calculate FT
+    N = len(x_bad)
+    T = 1/x_freq
+    freqs_positive = fft.fftfreq(N, T)[:N//2]
+    # ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
+    # power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
+
+    # Removing any NA values - leads to clean but un-evenly sampled data for LS method
+    power_ft = timeseries.LombScargle((np.arange(N)/x_freq)[pd.notna(x_bad)], x[pd.notna(x_bad)], normalization="psd").power(freqs_positive[1:])
+
+    # Calculate ACF
+    acf = sm.tsa.acf(x_bad, nlags=len(x_bad), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
+    
+    # Calculate SF
+    sfn = calc_sfn(pd.Series(x_bad), [2], 1, 0.9999)
+
+    return x_bad, prop_removed, freqs_positive, power_ft, acf, sfn["2"].values
+
+freqs_positive, power_ft, acf, sfn = calculate_stats()
 
 fig_data, ax_data = plt.subplots()
-ax_data = sb.lineplot(data = x).set(title="Time series")
-st.pyplot(fig_data)
+sb.lineplot(data = x, ax=ax_data, color = "green").set(title="Time series")
 
 fig_acf, ax_acf = plt.subplots()
-ax_acf = sb.lineplot(data = acf).set(title="Autocorrelation")
-st.pyplot(fig_acf)
+sb.lineplot(data = acf, ax = ax_acf, color = "green").set(title="Autocorrelation")
 
 fig_sf, ax_sf = plt.subplots()
-ax_sf = sb.lineplot(data = sfn["2"]).set(title="Second-order structure function")
+sb.lineplot(data = sfn, ax= ax_sf, color = "green").set(title="Second-order structure function")
+
+fig_psd, ax_psd = plt.subplots()
+sb.lineplot(data = pd.Series(power_ft, freqs_positive[1:]), ax= ax_psd, color = "green").set(title="Power spectrum", xscale = "log", yscale = "log")
+
+if missing > 0:
+    x_missing, prop_removed, freqs_positive_missing, power_ft_missing, acf_missing, sfn_missing = calculate_missing_stats(missing, removal_type)
+    
+    sb.lineplot(data = x_missing, ax=ax_data, color = "red")
+    sb.lineplot(data = acf_missing, ax = ax_acf, color = "red")
+    sb.lineplot(data = sfn_missing, ax=ax_sf, color = "red")
+
+    # Couldn't get power_ft_missing to nicely overlay power_ft, hence combining into df in this workaround
+    fig_psd, ax_psd = plt.subplots()
+    psd_bad = pd.Series(power_ft_missing, freqs_positive_missing[1:])
+    psd_good = pd.Series(power_ft, freqs_positive[1:])
+    df = pd.DataFrame({"good":psd_good, "bad":psd_bad})
+
+    palette = {"good":"green", "bad":"red"}
+
+    sb.lineplot(data = df, ax=ax_psd, palette = palette, dashes = False, legend=False).set(title="Power spectrum", xscale = "log", yscale = "log")
+
+st.pyplot(fig_data)
+st.pyplot(fig_acf)
 st.pyplot(fig_sf)
+st.pyplot(fig_psd)
 
-#################################
-#if x != y:
-fig_ft = go.Figure()
-fig_ft.add_trace(go.Scatter(x=freqs_positive, y=power_ft, name='FT'))
-fig_ft.add_trace(go.Scatter(x=freqs_positive[1:], y = 1000*freqs_positive[1:]**(-5/3), name = "-5/3 power law"))
-fig_ft.update_xaxes(type="log", title_text="Frequency (Hz)")
-fig_ft.update_yaxes(type="log", title_text='PSD [nT^2/Hz]')
-fig_ft.update_layout(
-    #legend_title_text="Method", 
-    #width=700, 
-    #height=450, 
-    title_text = "Power spectrum")
-
-st.plotly_chart(fig_ft)
-#else:
-    # fig = sb.relplot(data=dset_select, x=x, y=y, hue="Species")
+# fig_ft = go.Figure()
+# fig_ft.add_trace(go.Scatter(x=freqs_positive[1:], y=power_ft, name='FT of complete data'))
+# st.plotly_chart(fig_ft)
