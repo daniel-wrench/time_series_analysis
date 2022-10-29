@@ -145,18 +145,18 @@ if missing > 0:
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-   st.header("Time series")
+   st.subheader("Time series")
    st.pyplot(fig_data)
    st.latex(r'''x(t)''')
 
 with col2:
-   st.header("Autocorrelation")
+   st.subheader("Autocorrelation")
    st.pyplot(fig_acf)
    st.latex(r'''R(\tau)=\langle x(t)x(t+\tau)\rangle''')
    st.write("Missing values are allowed for by removing nans when computing the mean and cross-products that are used to estimate the autocovariance.")
 
 with col3:
-    st.header("Structure function")
+    st.subheader("Structure function")
     # Currently have opposite logic due to not quite right reactivity
     # (both this plot and the following plot reload after ticking the checkbox,
     # and uses previous value of checkbox)
@@ -170,7 +170,7 @@ with col3:
     st.session_state['sfn_log'] = sfn_log
 
 with col4:
-   st.header("Power spectrum")
+   st.subheader("Power spectrum")
    st.pyplot(fig_psd)
    st.latex(r'''X(k) = x(t)e^{2\pi i kn/N}''')
    st.write("Missing values are allowed for by using the Lomb-Scargle periodogram method.")
