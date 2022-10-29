@@ -4,18 +4,13 @@
 
 
 import pandas as pd
-import seaborn as sb
 import streamlit as st
-import plotly.graph_objects as go
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from scipy import fft
 from remove_data import remove_data
 from astropy import timeseries
-
-
-sb.set()
 
 st.set_page_config(layout="wide")
 
