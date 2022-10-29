@@ -1,6 +1,6 @@
 # TO-DO
 
-# Add data removal feature (test stats on this outside of dashboard)
+# Add FBm
 
 
 import pandas as pd
@@ -17,13 +17,17 @@ from astropy import timeseries
 
 sb.set()
 
+st.set_page_config(layout="wide")
+
 st.title("The Effect of Missing Data on Statistics of Time Series")
+
+if 'sfn_log' not in st.session_state:
+    st.session_state['sfn_log'] = True
 
 ########################################################################
 
-psp_df = pd.read_pickle("data_processed/psp_fld_l2_mag_rtn_201811.pkl")
-psp_df_scalar = psp_df.loc[:, "B_R"][:10000]
-psp = psp_df_scalar.values
+psp_df = pd.read_pickle("psp_mag_scalar_int.pkl")
+psp = psp_df.values
 psp_freq = 73.24
 
 def calc_sfn(data, p, freq=1, max_lag_prop=0.2):
@@ -53,7 +57,7 @@ def simulate_stochastic_processes():
 ########################################################################
 
 datasets = ["White noise", "Brownian motion", "Solar wind magnetic field (PSP)"]
-dataset = st.sidebar.selectbox("Select the dataset", datasets, index=0)
+dataset = st.sidebar.selectbox("Select dataset", datasets, index=0)
 missing = st.sidebar.slider("Select amount of data to remove", 0, 100)
 removal_type = st.sidebar.radio("Select how to remove data", ["Uniformly", "In chunks"])
 
@@ -122,38 +126,60 @@ def calculate_missing_stats(missing, removal_type):
 freqs_positive, power_ft, acf, sfn = calculate_stats()
 
 fig_data, ax_data = plt.subplots()
-sb.lineplot(data = x, ax=ax_data, color = "green").set(title="Time series")
+ax_data.plot(x, c = '0.6')
 
 fig_acf, ax_acf = plt.subplots()
-sb.lineplot(data = acf, ax = ax_acf, color = "green").set(title="Autocorrelation")
+ax_acf.plot(acf, c = "grey")
 
-fig_sf, ax_sf = plt.subplots()
-sb.lineplot(data = sfn, ax= ax_sf, color = "green").set(title="Second-order structure function")
+fig_sfn, ax_sfn = plt.subplots()
+ax_sfn.plot(sfn, c = "grey")
 
 fig_psd, ax_psd = plt.subplots()
-sb.lineplot(data = pd.Series(power_ft, freqs_positive[1:]), ax= ax_psd, color = "green").set(title="Power spectrum", xscale = "log", yscale = "log")
+ax_psd.plot(freqs_positive[1:], power_ft, c = "grey")
+ax_psd.semilogx()
+ax_psd.semilogy()
 
 if missing > 0:
     x_missing, prop_removed, freqs_positive_missing, power_ft_missing, acf_missing, sfn_missing = calculate_missing_stats(missing, removal_type)
     
-    sb.lineplot(data = x_missing, ax=ax_data, color = "red")
-    sb.lineplot(data = acf_missing, ax = ax_acf, color = "red")
-    sb.lineplot(data = sfn_missing, ax=ax_sf, color = "red")
+    ax_data.plot(x_missing, color = "black")
+    ax_acf.plot(acf_missing, color = "black")
+    ax_sfn.plot(sfn_missing, color = "black")
+    ax_psd.plot(freqs_positive_missing[1:], power_ft_missing, color = "black")
 
-    # Couldn't get power_ft_missing to nicely overlay power_ft, hence combining into df in this workaround
-    fig_psd, ax_psd = plt.subplots()
-    psd_bad = pd.Series(power_ft_missing, freqs_positive_missing[1:])
-    psd_good = pd.Series(power_ft, freqs_positive[1:])
-    df = pd.DataFrame({"good":psd_good, "bad":psd_bad})
+col1, col2, col3, col4 = st.columns(4)
 
-    palette = {"good":"green", "bad":"red"}
+with col1:
+   st.header("Time series")
+   st.pyplot(fig_data)
+   st.latex(r'''x(t)''')
 
-    sb.lineplot(data = df, ax=ax_psd, palette = palette, dashes = False, legend=False).set(title="Power spectrum", xscale = "log", yscale = "log")
+with col2:
+   st.header("Autocorrelation")
+   st.pyplot(fig_acf)
+   st.latex(r'''R(\tau)=\langle x(t)x(t+\tau)\rangle''')
+   st.write("Missing values are allowed for by removing nans when computing the mean and cross-products that are used to estimate the autocovariance.")
 
-st.pyplot(fig_data)
-st.pyplot(fig_acf)
-st.pyplot(fig_sf)
-st.pyplot(fig_psd)
+with col3:
+    st.header("Structure function")
+    # Currently have opposite logic due to not quite right reactivity
+    # (both this plot and the following plot reload after ticking the checkbox,
+    # and uses previous value of checkbox)
+    if st.session_state['sfn_log'] == False: 
+        ax_sfn.semilogx()
+        ax_sfn.semilogy()    
+    st.pyplot(fig_sfn)
+    st.latex(r'''D(\tau)=\langle |(x(t+\tau)-x(t)|^2\rangle''')
+    st.write("Missing values are allowed for by removing nans when computing the mean and cross-products that are used to estimate the structure function.")
+    sfn_log = st.checkbox("Log-log plot")
+    st.session_state['sfn_log'] = sfn_log
+
+with col4:
+   st.header("Power spectrum")
+   st.pyplot(fig_psd)
+   st.latex(r'''X(k) = x(t)e^{2\pi i kn/N}''')
+   st.write("Missing values are allowed for by using the Lomb-Scargle periodogram method.")
+
 
 # fig_ft = go.Figure()
 # fig_ft.add_trace(go.Scatter(x=freqs_positive[1:], y=power_ft, name='FT of complete data'))
