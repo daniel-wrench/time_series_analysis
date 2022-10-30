@@ -8,6 +8,7 @@ import streamlit as st
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
+import matplotlib
 from scipy import fft
 from remove_data import remove_data
 from astropy import timeseries
@@ -16,8 +17,15 @@ st.set_page_config(layout="wide")
 
 st.title("Time Series Statistics and the Effect of Data Gaps")
 
-if 'sfn_log' not in st.session_state:
-    st.session_state['sfn_log'] = True
+@st.cache(hash_funcs={matplotlib.figure.Figure: lambda _: None})
+def plot_sfn(sfn_log, missing):
+    if sfn_log == True:  
+        ax_sfn.semilogx()
+        ax_sfn.semilogy()   
+
+    if missing > 0:
+        ax_sfn.plot(sfn_missing, color = "black")
+    return fig_sfn 
 
 ########################################################################
 
@@ -61,7 +69,7 @@ gap_method = st.sidebar.radio("Select method for handling data gaps", ["None", "
 explanations = {
     "None":"""
     For the autocorrelation and structure function, missing values are allowed for by removing nans when computing the mean and 
-    cross-products that are used to estimate the autocovariance. For the power spectrum, missing values are allowed for
+    cross-products that are used to estimate the statistic. For the power spectrum, missing values are allowed for
     by using the Lomb-Scargle periodogram method.""",
     "Linear interpolation": """Gaps are interpolated using a straight line between the two data points on either side of the gap."""}
 expander = st.sidebar.expander("See explanation of method")
@@ -159,7 +167,6 @@ if missing > 0:
     
     ax_data.plot(x_missing, color = "black")
     ax_acf.plot(acf_missing, color = "black")
-    ax_sfn.plot(sfn_missing, color = "black")
     ax_psd.plot(freqs_positive_missing[1:], power_ft_missing, color = "black")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -176,21 +183,15 @@ with col2:
 
 with col3:
     st.subheader("Structure function")
-    # Currently have opposite logic due to not quite right reactivity
-    # (both this plot and the following plot reload after ticking the checkbox,
-    # and uses previous value of checkbox)
-    if st.session_state['sfn_log'] == False: 
-        ax_sfn.semilogx()
-        ax_sfn.semilogy()    
+    fig_sfn = plot_sfn(st.session_state.log, missing)
     st.pyplot(fig_sfn)
     st.latex(r'''D(\tau)=\langle |(x(t+\tau)-x(t)|^2\rangle''')
-    sfn_log = st.checkbox("Log-log plot")
-    st.session_state['sfn_log'] = sfn_log
+    sfn_log = st.checkbox("Log-log plot", key = "log")
 
 with col4:
-   st.subheader("Power spectrum")
-   st.pyplot(fig_psd)
-   st.latex(r'''P(k) = |X(f)|^2 \newline X(f) = \int_{-\infty}^{\infty} x(t)e^{2\pi i ft}''')
+    st.subheader("Power spectrum")
+    st.pyplot(fig_psd)
+    st.latex(r'''P(k) = |X(f)|^2 \newline X(f) = \int_{-\infty}^{\infty} x(t)e^{2\pi i ft}''')
 
 # fig_ft = go.Figure()
 # fig_ft.add_trace(go.Scatter(x=freqs_positive[1:], y=power_ft, name='FT of complete data'))
