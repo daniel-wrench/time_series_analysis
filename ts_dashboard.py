@@ -14,7 +14,7 @@ from astropy import timeseries
 
 st.set_page_config(layout="wide")
 
-st.title("The Effect of Missing Data on Statistics of Time Series")
+st.title("Time Series Statistics and the Effect of Data Gaps")
 
 if 'sfn_log' not in st.session_state:
     st.session_state['sfn_log'] = True
@@ -52,6 +52,7 @@ def simulate_stochastic_processes():
 ########################################################################
 
 datasets = ["White noise", "Brownian motion", "Solar wind magnetic field (PSP)"]
+formulae = [r'''x(t)\sim N(0,1)''', r'''x(t) = \sum_{i=1}^tW(t),\newline W(t)\sim N(0,1)''', r'''x(t)''']
 dataset = st.sidebar.selectbox("Select dataset", datasets, index=0)
 missing = st.sidebar.slider("Select amount of data to remove", 0, 100)
 removal_type = st.sidebar.radio("Select how to remove data", ["Uniformly", "In chunks"])
@@ -60,16 +61,17 @@ wn, bm = simulate_stochastic_processes()
 
 dset = pd.DataFrame({
     "name": datasets,
+    "formula":formulae,
     "data": [wn, bm, psp],
     "freq": [1, 1, psp_freq]})
 dset = dset.set_index("name")
 
 #################################
-
-st.write("You have selected ", dataset, " with ", missing, "% removed ", str.lower(removal_type))
-
+formula = dset.formula[dataset]
 x = dset.data[dataset]
 x_freq = dset.freq[dataset]
+
+st.write("You have selected ", dataset, " with ", missing, "% removed ", str.lower(removal_type))
 
 @st.cache
 def calculate_stats():
@@ -147,7 +149,7 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
    st.subheader("Time series")
    st.pyplot(fig_data)
-   st.latex(r'''x(t)''')
+   st.latex(formula)
 
 with col2:
    st.subheader("Autocorrelation")
