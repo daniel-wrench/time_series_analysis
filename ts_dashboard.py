@@ -17,6 +17,9 @@ st.set_page_config(layout="wide")
 
 st.title("Time Series Statistics and the Effect of Data Gaps")
 
+if 'log' not in st.session_state:
+    st.session_state.log = False
+
 @st.cache(hash_funcs={matplotlib.figure.Figure: lambda _: None})
 def plot_sfn(sfn_log, missing):
     if sfn_log == True:  
