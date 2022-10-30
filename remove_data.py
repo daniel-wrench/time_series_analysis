@@ -38,7 +38,9 @@ def remove_data(array, proportion, chunks = None, sigma = 0.1):
     array_bad = array.copy()
     array_bad[remove_idx] = np.nan
 
-    # Will be somewhat different from value specified
+    # Will be somewhat different from value specified if removed in chunks
     prop_removed = np.sum(pd.isna(array_bad))/len(array)
+    idx = np.arange(len(array))
+    array_bad_idx = np.delete(idx, remove_idx)
 
-    return array_bad, prop_removed
+    return array_bad, array_bad_idx, prop_removed

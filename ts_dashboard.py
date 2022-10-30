@@ -1,7 +1,7 @@
 # TO-DO
 
 # Add FBm
-
+# Add other gap-handling methods
 
 import pandas as pd
 import streamlit as st
@@ -56,6 +56,16 @@ formulae = [r'''x(t)\sim N(0,1)''', r'''x(t) = \sum_{i=1}^tW(t),\newline W(t)\si
 dataset = st.sidebar.selectbox("Select dataset", datasets, index=0)
 missing = st.sidebar.slider("Select amount of data to remove", 0, 100)
 removal_type = st.sidebar.radio("Select how to remove data", ["Uniformly", "In chunks"])
+gap_method = st.sidebar.radio("Select method for handling data gaps", ["None", "Linear interpolation"])
+
+explanations = {
+    "None":"""
+    For the autocorrelation and structure function, missing values are allowed for by removing nans when computing the mean and 
+    cross-products that are used to estimate the autocovariance. For the power spectrum, missing values are allowed for
+    by using the Lomb-Scargle periodogram method.""",
+    "Linear interpolation": """Gaps are interpolated using a straight line between the two data points on either side of the gap."""}
+expander = st.sidebar.expander("See explanation of method")
+expander.write(explanations[gap_method])
 
 wn, bm = simulate_stochastic_processes()
 
@@ -71,7 +81,8 @@ formula = dset.formula[dataset]
 x = dset.data[dataset]
 x_freq = dset.freq[dataset]
 
-st.write("You have selected ", dataset, " with ", missing, "% removed ", str.lower(removal_type))
+st.write("You have selected ", dataset, " with ", missing, "% removed ", str.lower(removal_type), ", handled using", gap_method)
+st.markdown("*Hide the sidebar on the left to expand the plots*")
 
 @st.cache
 def calculate_stats():
@@ -95,12 +106,16 @@ def calculate_stats():
     return freqs_positive, power_ft, acf, sfn["2"].values
 
 @st.cache
-def calculate_missing_stats(missing, removal_type):
+def calculate_missing_stats(missing, removal_type, gap_method):
 
     if removal_type == "In chunks":
-        x_bad, prop_removed = remove_data(x, missing/100, chunks = 10, sigma = 0.1)
+        x_bad, x_bad_ind, prop_removed = remove_data(x, missing/100, chunks = 10, sigma = 0.1)
     elif removal_type == "Uniformly": 
-        x_bad, prop_removed = remove_data(x, missing/100)
+        x_bad, x_bad_ind, prop_removed = remove_data(x, missing/100)
+
+    if gap_method == "Linear interpolation":
+        x_bad_cleaned = x_bad[pd.notna(x_bad)]
+        x_bad = np.interp(np.arange(len(x)), x_bad_ind, x_bad_cleaned)
 
     # Calculate FT
     N = len(x_bad)
@@ -109,8 +124,11 @@ def calculate_missing_stats(missing, removal_type):
     # ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
     # power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
 
+    if gap_method == "Linear interpolation": 
+        power_ft = timeseries.LombScargle((np.arange(N)/x_freq), x_bad, normalization="psd").power(freqs_positive[1:])
     # Removing any NA values - leads to clean but un-evenly sampled data for LS method
-    power_ft = timeseries.LombScargle((np.arange(N)/x_freq)[pd.notna(x_bad)], x[pd.notna(x_bad)], normalization="psd").power(freqs_positive[1:])
+    else:
+        power_ft = timeseries.LombScargle((np.arange(N)/x_freq)[pd.notna(x_bad)], x[pd.notna(x_bad)], normalization="psd").power(freqs_positive[1:])
 
     # Calculate ACF
     acf = sm.tsa.acf(x_bad, nlags=len(x_bad), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
@@ -137,7 +155,7 @@ ax_psd.semilogx()
 ax_psd.semilogy()
 
 if missing > 0:
-    x_missing, prop_removed, freqs_positive_missing, power_ft_missing, acf_missing, sfn_missing = calculate_missing_stats(missing, removal_type)
+    x_missing, prop_removed, freqs_positive_missing, power_ft_missing, acf_missing, sfn_missing = calculate_missing_stats(missing, removal_type, gap_method)
     
     ax_data.plot(x_missing, color = "black")
     ax_acf.plot(acf_missing, color = "black")
@@ -155,7 +173,6 @@ with col2:
    st.subheader("Autocorrelation")
    st.pyplot(fig_acf)
    st.latex(r'''R(\tau)=\langle x(t)x(t+\tau)\rangle''')
-   st.write("Missing values are allowed for by removing nans when computing the mean and cross-products that are used to estimate the autocovariance.")
 
 with col3:
     st.subheader("Structure function")
@@ -167,16 +184,13 @@ with col3:
         ax_sfn.semilogy()    
     st.pyplot(fig_sfn)
     st.latex(r'''D(\tau)=\langle |(x(t+\tau)-x(t)|^2\rangle''')
-    st.write("Missing values are allowed for by removing nans when computing the mean and cross-products that are used to estimate the structure function.")
     sfn_log = st.checkbox("Log-log plot")
     st.session_state['sfn_log'] = sfn_log
 
 with col4:
    st.subheader("Power spectrum")
    st.pyplot(fig_psd)
-   st.latex(r'''X(k) = x(t)e^{2\pi i kn/N}''')
-   st.write("Missing values are allowed for by using the Lomb-Scargle periodogram method.")
-
+   st.latex(r'''P(k) = |X(f)|^2 \newline X(f) = \int_{-\infty}^{\infty} x(t)e^{2\pi i ft}''')
 
 # fig_ft = go.Figure()
 # fig_ft.add_trace(go.Scatter(x=freqs_positive[1:], y=power_ft, name='FT of complete data'))
