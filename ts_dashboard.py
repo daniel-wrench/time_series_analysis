@@ -2,6 +2,7 @@
 
 # Add FBm
 # Add other gap-handling methods
+# Add "loss function" to quantity accuracy of each method (MSE, MAPE)
 
 import pandas as pd
 import streamlit as st
@@ -21,8 +22,8 @@ if 'log' not in st.session_state:
     st.session_state.log = False
 
 @st.cache(hash_funcs={matplotlib.figure.Figure: lambda _: None})
-def plot_sfn(sfn_log, missing):
-    if sfn_log == True:  
+def plot_sfn(dataset, missing, removal_type, gap_method, log):
+    if log == True:  
         ax_sfn.semilogx()
         ax_sfn.semilogy()   
 
@@ -186,7 +187,7 @@ with col2:
 
 with col3:
     st.subheader("Structure function")
-    fig_sfn = plot_sfn(st.session_state.log, missing)
+    fig_sfn = plot_sfn(dataset, missing, removal_type, gap_method, st.session_state.log)
     st.pyplot(fig_sfn)
     st.latex(r'''D(\tau)=\langle |(x(t+\tau)-x(t)|^2\rangle''')
     sfn_log = st.checkbox("Log-log plot", key = "log")
