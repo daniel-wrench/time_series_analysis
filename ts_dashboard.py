@@ -55,6 +55,21 @@ def calc_sfn(data, p, freq=1, max_lag_prop=0.2):
         
     return structure_functions.dropna()
 
+# Get MSE between two curves
+def calc_mse(curve1, curve2):
+    mse = np.sum((curve1-curve2)**2)/len(curve1)
+    if mse == np.inf:
+      mse = np.nan
+    return(mse) 
+
+# Get MAPE between two curves
+def calc_mape(curve1, curve2):
+    curve1 = curve1 + 0.000001 # Have to add this so there is no division by 0
+    mape = np.sum(np.abs((curve1-curve2)/curve1))/len(curve1)
+    if mape == np.inf:
+      mape = np.nan
+    return(mape) 
+
 @st.cache
 def simulate_stochastic_processes():
     wn = np.random.normal(size=10000)
@@ -94,7 +109,7 @@ x = dset.data[dataset]
 x_freq = dset.freq[dataset]
 
 st.write("You have selected ", dataset, " with ", missing, "% removed ", str.lower(removal_type), ", handled using", gap_method)
-st.markdown("*Hide the sidebar on the left to expand the plots*")
+st.markdown("*Hide the sidebar on the left to expand the plots. They can be further expanded by clicking the arrows in the top right of each plot.*")
 
 @st.cache
 def calculate_stats():
@@ -195,7 +210,7 @@ with col3:
 with col4:
     st.subheader("Power spectrum")
     st.pyplot(fig_psd)
-    st.latex(r'''P(k) = |X(f)|^2 \newline X(f) = \int_{-\infty}^{\infty} x(t)e^{2\pi i ft}''')
+    st.latex(r'''P(f) = |X(f)|^2 \newline X(f) = \int_{-\infty}^{\infty} x(t)e^{2\pi i ft}''')
 
 # fig_ft = go.Figure()
 # fig_ft.add_trace(go.Scatter(x=freqs_positive[1:], y=power_ft, name='FT of complete data'))
