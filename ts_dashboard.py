@@ -23,8 +23,11 @@ if 'log' not in st.session_state:
 
 ########################################################################
 
+# Note that in these cached functions, the arguments specify when the 
+# function should be re-run (when the values of these arguments change)
+
 @st.cache(hash_funcs={matplotlib.figure.Figure: lambda _: None})
-def plot_sfn(missing, log):
+def plot_sfn(dataset, missing, removal_type, gap_method, log):
     if log == True:  
         ax_sfn.semilogx()
         ax_sfn.semilogy()   
@@ -174,7 +177,7 @@ with col2:
 
 with col3:
     st.subheader("Structure function")
-    fig_sfn = plot_sfn(missing, st.session_state.log)
+    fig_sfn = plot_sfn(dataset, missing, removal_type, gap_method, st.session_state.log)
     st.pyplot(fig_sfn)
     st.latex(r'''D(\tau)=\langle |(x(t+\tau)-x(t)|^2\rangle''')
     sfn_log = st.checkbox("Log-log plot", key = "log")
