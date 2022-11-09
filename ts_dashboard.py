@@ -11,7 +11,7 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import matplotlib
 from scipy import fft
-import utils 
+import ts_dashboard_utils as utils 
 from astropy import timeseries
 
 st.set_page_config(layout="wide")
