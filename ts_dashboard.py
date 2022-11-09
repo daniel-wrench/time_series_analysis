@@ -11,7 +11,7 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import matplotlib
 from scipy import fft
-from remove_data import remove_data
+import utils 
 from astropy import timeseries
 
 st.set_page_config(layout="wide")
@@ -21,8 +21,10 @@ st.title("Time Series Statistics and the Effect of Data Gaps")
 if 'log' not in st.session_state:
     st.session_state.log = False
 
+########################################################################
+
 @st.cache(hash_funcs={matplotlib.figure.Figure: lambda _: None})
-def plot_sfn(dataset, missing, removal_type, gap_method, log):
+def plot_sfn(missing, log):
     if log == True:  
         ax_sfn.semilogx()
         ax_sfn.semilogy()   
@@ -31,52 +33,66 @@ def plot_sfn(dataset, missing, removal_type, gap_method, log):
         ax_sfn.plot(sfn_missing, color = "black")
     return fig_sfn 
 
-########################################################################
-
-psp_df = pd.read_pickle("psp_mag_scalar_int.pkl")
-psp = psp_df.values
-psp_freq = 73.24
-
-def calc_sfn(data, p, freq=1, max_lag_prop=0.2):
-    #Calculate lags
-    lag_function = {}
-    for i in np.arange(1, round(max_lag_prop*len(data))): #Limiting maximum lag to 20% of dataset length
-        lag_function[i] = data.diff(i)
-
-    #Initialise dataframe
-    structure_functions = pd.DataFrame(index = np.arange(1,len(data)))
-
-    # Converting lag values from points to seconds
-    structure_functions["lag"] = structure_functions.index/freq 
-
-    for order in p:
-        lag_dataframe = pd.DataFrame(lag_function)**order # or put in .abs() before order: this only changes the odd-ordered functions
-        structure_functions[str(order)] = pd.DataFrame(lag_dataframe.mean())
-        
-    return structure_functions.dropna()
-
-# Get MSE between two curves
-def calc_mse(curve1, curve2):
-    mse = np.sum((curve1-curve2)**2)/len(curve1)
-    if mse == np.inf:
-      mse = np.nan
-    return(mse) 
-
-# Get MAPE between two curves
-def calc_mape(curve1, curve2):
-    curve1 = curve1 + 0.000001 # Have to add this so there is no division by 0
-    mape = np.sum(np.abs((curve1-curve2)/curve1))/len(curve1)
-    if mape == np.inf:
-      mape = np.nan
-    return(mape) 
-
 @st.cache
 def simulate_stochastic_processes():
     wn = np.random.normal(size=10000)
     bm = np.cumsum(wn)
     return wn, bm
 
+@st.cache
+def calculate_stats():
+
+    # Calculate FT
+    N = len(x)
+    T = 1/x_freq
+    freqs_positive = fft.fftfreq(N, T)[:N//2]
+    # ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
+    # power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
+
+    # Removing any NA values - leads to clean but un-evenly sampled data for LS method
+    power_ft = timeseries.LombScargle(np.arange(N)/x_freq, x, normalization="psd").power(freqs_positive[1:])
+
+    # Calculate ACF
+    acf = sm.tsa.acf(x, nlags=len(x), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
+    
+    # Calculate SF
+    sfn = utils.calc_sfn(pd.Series(x), [2], 1, 0.9999)
+
+    return freqs_positive, power_ft, acf, sfn["2"].values
+
+@st.cache
+def calculate_missing_stats(x_bad, x_bad_ind, gap_method):
+
+    if gap_method == "Linear interpolation":
+        x_bad_cleaned = x_bad[pd.notna(x_bad)]
+        x_bad = np.interp(np.arange(len(x)), x_bad_ind, x_bad_cleaned)
+
+    # Calculate FT
+    N = len(x_bad)
+    T = 1/x_freq
+    freqs_positive = fft.fftfreq(N, T)[:N//2]
+    # ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
+    # power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
+
+    if gap_method == "Linear interpolation": 
+        power_ft = timeseries.LombScargle((np.arange(N)/x_freq), x_bad, normalization="psd").power(freqs_positive[1:])
+    # Removing any NA values - leads to clean but un-evenly sampled data for LS method
+    else:
+        power_ft = timeseries.LombScargle((np.arange(N)/x_freq)[pd.notna(x_bad)], x[pd.notna(x_bad)], normalization="psd").power(freqs_positive[1:])
+
+    # Calculate ACF
+    acf = sm.tsa.acf(x_bad, nlags=len(x_bad), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
+    
+    # Calculate SF
+    sfn = utils.calc_sfn(pd.Series(x_bad), [2], 1, 0.9999)
+
+    return x_bad, prop_removed, freqs_positive, power_ft, acf, sfn["2"].values
+
 ########################################################################
+
+psp_df = pd.read_pickle("psp_mag_scalar_int.pkl")
+psp = psp_df.values
+psp_freq = 73.24
 
 datasets = ["White noise", "Brownian motion", "Solar wind magnetic field (PSP)"]
 formulae = [r'''x(t)\sim N(0,1)''', r'''x(t) = \sum_{i=1}^tW(t),\newline W(t)\sim N(0,1)''', r'''x(t)''']
@@ -111,60 +127,6 @@ x_freq = dset.freq[dataset]
 st.write("You have selected ", dataset, " with ", missing, "% removed ", str.lower(removal_type), ", handled using", gap_method)
 st.markdown("*Hide the sidebar on the left to expand the plots. They can be further expanded by clicking the arrows in the top right of each plot.*")
 
-@st.cache
-def calculate_stats():
-
-    # Calculate FT
-    N = len(x)
-    T = 1/x_freq
-    freqs_positive = fft.fftfreq(N, T)[:N//2]
-    # ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
-    # power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
-
-    # Removing any NA values - leads to clean but un-evenly sampled data for LS method
-    power_ft = timeseries.LombScargle(np.arange(N)/x_freq, x, normalization="psd").power(freqs_positive[1:])
-
-    # Calculate ACF
-    acf = sm.tsa.acf(x, nlags=len(x), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
-    
-    # Calculate SF
-    sfn = calc_sfn(pd.Series(x), [2], 1, 0.9999)
-
-    return freqs_positive, power_ft, acf, sfn["2"].values
-
-@st.cache
-def calculate_missing_stats(missing, removal_type, gap_method):
-
-    if removal_type == "In chunks":
-        x_bad, x_bad_ind, prop_removed = remove_data(x, missing/100, chunks = 10, sigma = 0.1)
-    elif removal_type == "Uniformly": 
-        x_bad, x_bad_ind, prop_removed = remove_data(x, missing/100)
-
-    if gap_method == "Linear interpolation":
-        x_bad_cleaned = x_bad[pd.notna(x_bad)]
-        x_bad = np.interp(np.arange(len(x)), x_bad_ind, x_bad_cleaned)
-
-    # Calculate FT
-    N = len(x_bad)
-    T = 1/x_freq
-    freqs_positive = fft.fftfreq(N, T)[:N//2]
-    # ft_x = fft.fft(x, norm = "backward") # Normalisation of 1/n only on the backward term
-    # power_ft = 1.0/N * np.abs(ft_x[0:(N//2)])**2
-
-    if gap_method == "Linear interpolation": 
-        power_ft = timeseries.LombScargle((np.arange(N)/x_freq), x_bad, normalization="psd").power(freqs_positive[1:])
-    # Removing any NA values - leads to clean but un-evenly sampled data for LS method
-    else:
-        power_ft = timeseries.LombScargle((np.arange(N)/x_freq)[pd.notna(x_bad)], x[pd.notna(x_bad)], normalization="psd").power(freqs_positive[1:])
-
-    # Calculate ACF
-    acf = sm.tsa.acf(x_bad, nlags=len(x_bad), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
-    
-    # Calculate SF
-    sfn = calc_sfn(pd.Series(x_bad), [2], 1, 0.9999)
-
-    return x_bad, prop_removed, freqs_positive, power_ft, acf, sfn["2"].values
-
 freqs_positive, power_ft, acf, sfn = calculate_stats()
 
 fig_data, ax_data = plt.subplots()
@@ -181,8 +143,18 @@ ax_psd.plot(freqs_positive[1:], power_ft, c = "grey")
 ax_psd.semilogx()
 ax_psd.semilogy()
 
+@st.cache
+def remove_data_better(array, proportion, chunks, sigma, removal_type):
+    if removal_type == "In chunks":
+        x_bad, x_bad_ind, prop_removed = utils.remove_data(array, proportion, chunks, sigma)
+    elif removal_type == "Uniformly":
+        x_bad, x_bad_ind, prop_removed = utils.remove_data(array, proportion)
+    return x_bad, x_bad_ind, prop_removed
+
 if missing > 0:
-    x_missing, prop_removed, freqs_positive_missing, power_ft_missing, acf_missing, sfn_missing = calculate_missing_stats(missing, removal_type, gap_method)
+    x_bad, x_bad_ind, prop_removed = remove_data_better(x, missing/100, chunks = 10, sigma = 0.1, removal_type=removal_type)
+
+    x_missing, prop_removed, freqs_positive_missing, power_ft_missing, acf_missing, sfn_missing = calculate_missing_stats(x_bad, x_bad_ind, gap_method)
     
     ax_data.plot(x_missing, color = "black")
     ax_acf.plot(acf_missing, color = "black")
@@ -202,7 +174,7 @@ with col2:
 
 with col3:
     st.subheader("Structure function")
-    fig_sfn = plot_sfn(dataset, missing, removal_type, gap_method, st.session_state.log)
+    fig_sfn = plot_sfn(missing, st.session_state.log)
     st.pyplot(fig_sfn)
     st.latex(r'''D(\tau)=\langle |(x(t+\tau)-x(t)|^2\rangle''')
     sfn_log = st.checkbox("Log-log plot", key = "log")
@@ -211,7 +183,3 @@ with col4:
     st.subheader("Power spectrum")
     st.pyplot(fig_psd)
     st.latex(r'''P(f) = |X(f)|^2 \newline X(f) = \int_{-\infty}^{\infty} x(t)e^{2\pi i ft}''')
-
-# fig_ft = go.Figure()
-# fig_ft.add_trace(go.Scatter(x=freqs_positive[1:], y=power_ft, name='FT of complete data'))
-# st.plotly_chart(fig_ft)
