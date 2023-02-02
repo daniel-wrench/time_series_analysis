@@ -1,8 +1,10 @@
 # TO-DO
 
-# Add FBm
+# Add dataset: sine wave
+# Add table underneath each plot that gives the loss (MSE, MAPE) between the clean statistic
+# and gapped statistic for each gap-handling method
+# Add dataset: FBm
 # Add other gap-handling methods
-# Add "loss function" to quantity accuracy of each method (MSE, MAPE)
 
 import pandas as pd
 import streamlit as st
@@ -41,6 +43,12 @@ def simulate_stochastic_processes():
     wn = np.random.normal(size=10000)
     bm = np.cumsum(wn)
     return wn, bm
+
+@st.cache
+def simulate_sine_wave():
+    x = np.linspace(0, 50, 10000)
+    y = np.sin(x)
+    return y
 
 @st.cache
 def calculate_stats():
@@ -97,8 +105,12 @@ psp_df = pd.read_pickle("psp_mag_scalar_int.pkl")
 psp = psp_df.values
 psp_freq = 73.24
 
-datasets = ["White noise", "Brownian motion", "Solar wind magnetic field (PSP)"]
-formulae = [r'''x(t)\sim N(0,1)''', r'''x(t) = \sum_{i=1}^tW(t),\newline W(t)\sim N(0,1)''', r'''x(t)''']
+datasets = ["Sine wave", "White noise", "Brownian motion", "Solar wind magnetic field (PSP)"]
+formulae = [
+    r'''x(t)=\sin(t)''',
+    r'''x(t)\sim N(0,1)''', 
+    r'''x(t) = \sum_{i=1}^tW(t),\newline W(t)\sim N(0,1)''', 
+    r'''x(t)''']
 dataset = st.sidebar.selectbox("Select dataset", datasets, index=0)
 missing = st.sidebar.slider("Select amount of data to remove", 0, 100)
 removal_type = st.sidebar.radio("Select how to remove data", ["Uniformly", "In chunks"])
@@ -114,12 +126,13 @@ expander = st.sidebar.expander("See explanation of method")
 expander.write(explanations[gap_method])
 
 wn, bm = simulate_stochastic_processes()
+sw = simulate_sine_wave()
 
 dset = pd.DataFrame({
     "name": datasets,
     "formula":formulae,
-    "data": [wn, bm, psp],
-    "freq": [1, 1, psp_freq]})
+    "data": [sw, wn, bm, psp],
+    "freq": [200, 1, 1, psp_freq]})
 dset = dset.set_index("name")
 
 #################################
