@@ -1,6 +1,5 @@
 # TO-DO
 
-# Add dataset: sine wave
 # Add table underneath each plot that gives the loss (MSE, MAPE) between the clean statistic
 # and gapped statistic for each gap-handling method
 # Add dataset: FBm
@@ -93,7 +92,7 @@ def calculate_missing_stats(x_bad, x_bad_ind, gap_method):
 
     # Calculate ACF
     acf = sm.tsa.acf(x_bad, nlags=len(x_bad), missing = "conservative") # also available, "drop", but must reduce nlags to number of non-missing obs
-    
+
     # Calculate SF
     sfn = utils.calc_sfn(pd.Series(x_bad), [2], 1, 0.9999)
 
@@ -172,9 +171,42 @@ if missing > 0:
 
     x_missing, prop_removed, freqs_positive_missing, power_ft_missing, acf_missing, sfn_missing = calculate_missing_stats(x_bad, x_bad_ind, gap_method)
     
+    # This does not work for when not linearly interpolating gaps above ~50%, as acf_missing is shorter than acf 
+    #mse_acf, mape_acf = utils.calc_mse(acf, acf_missing), utils.calc_mape(acf, acf_missing)
+    
+    #mse_sfn, mape_sfn = utils.calc_mse(sfn, sfn_missing), utils.calc_mape(sfn, sfn_missing)
+    #mse_psd, mape_psd = utils.calc_mse(power_ft, power_ft_missing), utils.calc_mape(power_ft, power_ft_missing)
+
     ax_data.plot(x_missing, color = "black")
     ax_acf.plot(acf_missing, color = "black")
+    # ax_acf.annotate(
+    # "MSE = {0:.2f}\nMAPE = {1:.2f}".format(mse_acf, mape_acf), 
+    # xy=(1, 1), 
+    # xycoords='data',
+    # xytext=(0.65, 0.8), 
+    # textcoords='axes fraction',
+    # size = 15,
+    # transform=ax_acf.transAxes)
+
     ax_psd.plot(freqs_positive_missing[1:], power_ft_missing, color = "black")
+
+    # ax_psd.annotate(
+    # "MSE = {0:.2f}\nMAPE = {1:.2f}".format(mse_psd, mape_psd), 
+    # xy=(1, 1), 
+    # xycoords='data',
+    # xytext=(0.65, 0.8), 
+    # textcoords='axes fraction',
+    # size = 15,
+    # transform=ax_acf.transAxes)
+
+    # ax_sfn.annotate(
+    #     "MSE = {0:.2f}\nMAPE = {1:.2f}".format(mse_sfn, mape_sfn), 
+    #     xy=(1, 1), 
+    #     xycoords='data',
+    #     xytext=(0.1, 0.8), 
+    #     textcoords='axes fraction',
+    #     size = 15,
+    #     transform=ax_acf.transAxes)
 
 col1, col2, col3, col4 = st.columns(4)
 
