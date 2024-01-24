@@ -53,87 +53,37 @@ def plotz(tfiles, rfiles, name, plotpoints, timestamp):
         )
         ax0.legend()
 
-        # Plot the correlation function cr
-        # (already divided by 3 and correlation scale calculated)
-
-        # if len(names) == 3:
-        # ax1.plot(d[name]['times'],d[name]['cr']/3.,label='ACF')
-        # tcor=d[name]['times'][np.argmin(np.abs(d[name]['cr']/3.-1./np.e))]
-        # else:
-        ax1.plot(d[name]["times"], d[name]["cr"], label="ACF")
-        # tcor=d[name]['times'][np.argmin(np.abs(d[name]['cr']-1./np.e))]
-        tcor = d[name]["corr_scale_exp_trick"]
-        # Correlation scale is available in the stats file, don't need to calculate here
-        ax1.axvline(tcor, linestyle="--", c="black")
-        ax1.text(tcor * 1.1, 0.8, r"$t_{{corr}}$ = {0:.02f} s".format(tcor))
-        ax1.set_xlabel("$\Delta$ t (s)")
-        ax1.legend()
-
-        # Plot the structure function sfn
-        ax2.loglog(d[name]["sfn"].iloc[:, 2], label="S$^{(2)}$")
-        yyy = d[name]["sfn"].iloc[:, 2].values[58]
-        af.pltpwrl(50, yyy * 2.0, xi=1, xf=500, alpha=2.0 / 3, label="2/3", ax=ax2)
-        # yy2=d[name]['sfn'].iloc[:,2].values[1]*1.1
-        # ax2.text(3,yy2,r'S$^{{(2)}}(dt_{{max}})$={0:.03e}'.format(d[name]['sfn'][0,-1]))
-        ax2.set_xlabel("$\Delta$ t (s)")
-        ax2.legend()
-
-        # Plot the kurtosis sdk (not calculated component-wise currently)
-
-        # if len(names) == 3:
-        #    ax3.semilogx(d[names[0]]['tau'],d[names[0]]['sdk'],label='$\kappa_{'+names[0]+'}$')
-        #    ax3.semilogx(d[names[1]]['tau'],d[names[1]]['sdk'],label='$\kappa_{'+names[1]+'}$')
-        #    ax3.semilogx(d[names[2]]['tau'],d[names[2]]['sdk'],label='$\kappa_{'+names[2]+'}$')
-        # else:
-        ax3.semilogx(d[name]["sdk"], label="$\kappa_{" + name + "}$")
-        ax3.set_xlabel("$\Delta$ t (s)")
-        ax3.legend()
-
-        # Plot the PDF
-        # if len(names) == 3:
-        #    ax4.semilogy(d[names[0]]['bn1'   ],d[names[0]]['pdf1'   ],label=r'$\Delta = 1 dt$')
-        #    ax4.semilogy(d[names[0]]['bn10'  ],d[names[0]]['pdf10'  ],label=r'$\Delta = 10 dt$')
-        #    ax4.semilogy(d[names[0]]['bn100' ],d[names[0]]['pdf100' ],label=r'$\Delta = 100 dt$')
-        #    ax4.semilogy(d[names[0]]['bn1000'],d[names[0]]['pdf1000'],label=r'$\Delta = 1000 dt$')
-        # else:
-        #    ax4.semilogy(d[name]['bn1'   ],d[name]['pdf1'   ],label=r'$\Delta = 1 dt$')
-        #    ax4.semilogy(d[name]['bn10'  ],d[name]['pdf10'  ],label=r'$\Delta = 10 dt$')
-        #    ax4.semilogy(d[name]['bn100' ],d[name]['pdf100' ],label=r'$\Delta = 100 dt$')
-        #    ax4.semilogy(d[name]['bn1000'],d[name]['pdf1000'],label=r'$\Delta = 1000 dt$')
-        # ax4.legend()
-        # ax4.set_xlabel(r'$\Delta$'+names[0]+r'$/\sigma_{\Delta '+names[0]+'}$')
-        # ax4.set_ylabel('PDF')
-
-        ax4.plot(
+        # Plot the power spectrum
+        ax1.plot(
             d[name]["f_periodogram"], d[name]["power_periodogram"], alpha=0.5, c="C0"
         )
-        ax4.plot(d[name]["f_periodogram"], d[name]["p_smooth"], label="PSD", c="C0")
-        ax4.legend(loc="upper right")
-        ax4.set_xscale("log")
-        ax4.set_yscale("log")
-        ax4.set_xlabel("Frequency (Hz)")
+        ax1.plot(d[name]["f_periodogram"], d[name]["p_smooth"], label="PSD", c="C0")
+        ax1.legend(loc="upper right")
+        ax1.set_xscale("log")
+        ax1.set_yscale("log")
+        ax1.set_xlabel("Frequency (Hz)")
 
-        if not np.isnan(d[name]["qi"][0]):
-            ax4.plot(
+        if not np.isnan(d[name]["qi"]):
+            ax1.plot(
                 d[name]["xi"],
                 d[name]["pi"] * 3,
                 c="black",
                 ls="--",
                 label="Inertial range power-law fit",
             )
-            ax4.plot(
+            ax1.plot(
                 d[name]["xk"],
                 d[name]["pk"] * 3,
                 c="black",
                 ls="--",
                 label="Kinetic range power-law fit",
             )
-            ax4.text(d[name]["xi"][0] * 5, d[name]["pi"][0], "$f^{q_i}$")
-            ax4.text(d[name]["xk"][0] * 2, d[name]["pk"][0], "$f^{q_k}$")
+            ax1.text(d[name]["xi"][0] * 5, d[name]["pi"][0], "$f^{q_i}$")
+            ax1.text(d[name]["xk"][0] * 2, d[name]["pk"][0], "$f^{q_k}$")
 
             if not np.isnan(d[name]["break_s"]):
-                ax4.text(d[name]["break_s"] / 2, 4e-5, "$f_b$")
-                ax4.axvline(d[name]["break_s"], color="black", ls="dotted")
+                ax1.text(d[name]["break_s"] / 2, 4e-5, "$f_b$")
+                ax1.axvline(d[name]["break_s"], color="black", ls="dotted")
 
                 # Add box with timestamp and values of qi and qk
                 textstr = "\n".join(
@@ -150,15 +100,66 @@ def plotz(tfiles, rfiles, name, plotpoints, timestamp):
 
                 props = dict(boxstyle="round", facecolor="gray", alpha=0.2)
                 # Place the text box. (x, y) position is in axis coordinates.
-                ax4.text(
+                ax1.text(
                     0.05,
                     0.1,
                     textstr,
-                    transform=ax4.transAxes,
+                    transform=ax1.transAxes,
                     fontsize=8,
                     verticalalignment="bottom",
                     bbox=props,
                 )
+
+        # Plot the correlation function cr
+        # (already divided by 3 and correlation scale calculated)
+
+        # if len(names) == 3:
+        # ax2.plot(d[name]['times'],d[name]['cr']/3.,label='ACF')
+        # tcor=d[name]['times'][np.argmin(np.abs(d[name]['cr']/3.-1./np.e))]
+        # else:
+        ax2.plot(d[name]["times"], d[name]["cr"], label="ACF")
+        # tcor=d[name]['times'][np.argmin(np.abs(d[name]['cr']-1./np.e))]
+        tcor = d[name]["corr_scale_exp_trick"]
+        # Correlation scale is available in the stats file, don't need to calculate here
+        ax2.axvline(tcor, linestyle="--", c="black")
+        ax2.text(tcor * 1.1, 0.8, r"$t_{{corr}}$ = {0:.02f} s".format(tcor))
+        ax2.set_xlabel("$\Delta$ t (s)")
+        ax2.legend()
+
+        # Plot the structure function sfn
+        ax3.loglog(d[name]["sfn"].iloc[:, 2], label="S$^{(2)}$")
+        yyy = d[name]["sfn"].iloc[:, 2].values[58]
+        af.pltpwrl(50, yyy * 2.0, xi=1, xf=500, alpha=2.0 / 3, label="2/3", ax=ax3)
+        # yy2=d[name]['sfn'].iloc[:,2].values[1]*1.1
+        # ax3.text(3,yy2,r'S$^{{(2)}}(dt_{{max}})$={0:.03e}'.format(d[name]['sfn'][0,-1]))
+        ax3.set_xlabel("$\Delta$ t (s)")
+        ax3.legend()
+
+        # Plot the kurtosis sdk (not calculated component-wise currently)
+
+        # if len(names) == 3:
+        #    ax4.semilogx(d[names[0]]['tau'],d[names[0]]['sdk'],label='$\kappa_{'+names[0]+'}$')
+        #    ax4.semilogx(d[names[1]]['tau'],d[names[1]]['sdk'],label='$\kappa_{'+names[1]+'}$')
+        #    ax4.semilogx(d[names[2]]['tau'],d[names[2]]['sdk'],label='$\kappa_{'+names[2]+'}$')
+        # else:
+        ax4.semilogx(d[name]["sdk"], label="$\kappa_{" + name + "}$")
+        ax4.set_xlabel("$\Delta$ t (s)")
+        ax4.legend()
+
+        # Plot the PDF
+        # if len(names) == 3:
+        #    ax4.semilogy(d[names[0]]['bn1'   ],d[names[0]]['pdf1'   ],label=r'$\Delta = 1 dt$')
+        #    ax4.semilogy(d[names[0]]['bn10'  ],d[names[0]]['pdf10'  ],label=r'$\Delta = 10 dt$')
+        #    ax4.semilogy(d[names[0]]['bn100' ],d[names[0]]['pdf100' ],label=r'$\Delta = 100 dt$')
+        #    ax4.semilogy(d[names[0]]['bn1000'],d[names[0]]['pdf1000'],label=r'$\Delta = 1000 dt$')
+        # else:
+        #    ax4.semilogy(d[name]['bn1'   ],d[name]['pdf1'   ],label=r'$\Delta = 1 dt$')
+        #    ax4.semilogy(d[name]['bn10'  ],d[name]['pdf10'  ],label=r'$\Delta = 10 dt$')
+        #    ax4.semilogy(d[name]['bn100' ],d[name]['pdf100' ],label=r'$\Delta = 100 dt$')
+        #    ax4.semilogy(d[name]['bn1000'],d[name]['pdf1000'],label=r'$\Delta = 1000 dt$')
+        # ax4.legend()
+        # ax4.set_xlabel(r'$\Delta$'+names[0]+r'$/\sigma_{\Delta '+names[0]+'}$')
+        # ax4.set_ylabel('PDF')
 
         # plt.tight_layout()
         pdf.savefig(bbox_inches="tight")
