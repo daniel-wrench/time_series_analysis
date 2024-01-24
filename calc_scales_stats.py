@@ -6,11 +6,13 @@
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import src.utils as utils
+import src.params as params
+import glob
 import pickle
 
-# Extract variables from CDF files and save as pickle files
+# Prior to analysis, extract data from CDF files and save as pickle files
+
 
 # def get_subfolders(path):
 #     return sorted(glob.glob(path + "/*"))
@@ -26,17 +28,17 @@ import pickle
 
 # data_B = utils.pipeline(
 #     mfi_file_list[0],
-#     varlist=[params.timestamp, params_dict["Bwind, params_dict["Bwind_vec],
-#     thresholds=params_dict["mag_thresh,
-#     cadence=params_dict["dt_hr,
+#     varlist=[params.timestamp, params.Bwind, params.Bwind_vec],
+#     thresholds=params.mag_thresh,
+#     cadence=params.dt_hr,
 # )
 
-# data_B = data_B.rename(columns={params_dict["Bx: "Bx", params_dict["By: "By", params_dict["Bz: "Bz"})
+# data_B = data_B.rename(columns={params.Bx: "Bx", params.By: "By", params.Bz: "Bz"})
 # data_B = data_B.interpolate(method="linear")
 # mag_int_hr = data_B["2016-01-01 12:00":]
 
 # print(mag_int_hr.head())
-# mag_int_hr.to_pickle("data/processed/wind/mfi/2016-01-00_12:00.pkl")
+# mag_int_hr.to_pickle("data/processed/wind/mfi/20160101.pkl")
 
 # data_protons = utils.pipeline(
 #     proton_file_list[0],
@@ -68,10 +70,9 @@ import pickle
 # proton_int = data_protons["2016-01-01 12:00":]
 
 # print(proton_int.head())
-# proton_int.to_pickle("data/processed/wind/3dp/2016-01-00_12:00.pkl")
+# proton_int.to_pickle("data/processed/wind/3dp/20160101.pkl")
 
-
-# LR is currently used for ACF and SF, HR for spectrum and taylor scale
+# Define analysis functions
 
 
 def structure(data, ar_lags, ar_powers):
@@ -120,8 +121,13 @@ def structure(data, ar_lags, ar_powers):
 def calc_scales_stats(time_series, var_name, params_dict):
     """
     Calculate a rangle of scale-domain statistics for a given time series
-    :param time_series: list of pd.Series
+    Low-res time series is currently used for ACF and SF,
+    high-res for spectrum and taylor scale
+
+
+    :param time_series: list of 1 (scalar) or 3 (vector) pd.Series
     :param var_name: str
+    :param params_dict: dict
     :return: dict
     """
     # Compute autocorrelations and power spectra
@@ -134,16 +140,13 @@ def calc_scales_stats(time_series, var_name, params_dict):
     )  # Removing "S" from end of dt string
 
     corr_scale_exp_trick = utils.compute_outer_scale_exp_trick(time_lags_lr, acf_lr)
-    # corr_scale_exp_trick_list.append(corr_scale_exp_trick)
 
     # Use estimate from 1/e method to select fit amount
     corr_scale_exp_fit = utils.compute_outer_scale_exp_fit(
         time_lags_lr, acf_lr, np.round(2 * corr_scale_exp_trick)
     )
-    # corr_scale_exp_fit_list.append(corr_scale_exp_fit)
 
     corr_scale_int = utils.compute_outer_scale_integral(time_lags_lr, acf_lr)
-    # corr_scale_int_list.append(corr_scale_int)
 
     time_lags_hr, acf_hr = utils.compute_nd_acf(
         time_series=time_series, nlags=params_dict["nlags_hr"]
@@ -171,17 +174,9 @@ def calc_scales_stats(time_series, var_name, params_dict):
             f_max_kinetic=params_dict["f_max_kinetic"],
         )
 
-        # inertial_slope_list.append(slope_i)
-        # kinetic_slope_list.append(slope_k)
-        # spectral_break_list.append(break_s)
-
     except Exception as e:
         print("Error: spectral stats calculation failed: {}".format(e))
         # print("Interval timestamp: {}".format(int_start))
-        # inertial_slope_list.append(np.nan)
-        # kinetic_slope_list.append(np.nan)
-        # spectral_break_list.append(np.nan)
-        # slope_k = None
 
     if params_dict["tau_min"] is not None:
         taylor_scale_u, taylor_scale_u_std = utils.compute_taylor_chuychai(
@@ -213,7 +208,7 @@ def calc_scales_stats(time_series, var_name, params_dict):
     sfns = structure(int_lr_df, np.arange(1, round(0.2 * len(int_lr_df))), [1, 2, 3, 4])
 
     # Calculate kurtosis (currently not component-wise)
-    sdk = sfns[["2", "4"]]
+    sdk = sfns[["2", "4"]].copy()
     sdk.columns = ["2", "4"]
     sdk["2^2"] = sdk["2"] ** 2
     kurtosis = sdk["4"].div(sdk["2^2"])
@@ -253,7 +248,9 @@ def calc_scales_stats(time_series, var_name, params_dict):
 
 # TESTING OUT THE FUNCTION
 
-mag_int_hr = pd.read_pickle("data/processed/wind/mfi/2016-01-00_12:00.pkl")
+timestamp = "20160101"
+
+mag_int_hr = pd.read_pickle("data/processed/wind/mfi/" + timestamp + ".pkl")
 
 # Frequency bounds are taken from Wang et al. (2018, JGR)
 mag_params = {
@@ -268,7 +265,7 @@ mag_params = {
     "tau_max": 50,
 }
 
-proton_int = pd.read_pickle("data/processed/wind/3dp/2016-01-00_12:00.pkl")
+proton_int = pd.read_pickle("data/processed/wind/3dp/" + timestamp + ".pkl")
 
 proton_params = {
     "f_min_inertial": None,
@@ -288,8 +285,8 @@ proton_params = {
 flr, flt = calc_scales_stats([mag_int_hr.Bx], "Bx", mag_params)
 
 # Save dictionary for later plotting
-flr.to_pickle("data/processed/" + "Bx_raw.pkl")
-with open("data/processed/" + "Bx_turb.pkl", "wb") as file:
+flr.to_pickle("data/processed/" + "Bx_raw_" + timestamp + ".pkl")
+with open("data/processed/" + "Bx_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
 
@@ -298,8 +295,8 @@ flr, flt = calc_scales_stats(
     [mag_int_hr.Bx, mag_int_hr.By, mag_int_hr.Bz], "B", mag_params
 )
 
-flr.to_pickle("data/processed/" + "B_raw.pkl")
-with open("data/processed/" + "B_turb.pkl", "wb") as file:
+flr.to_pickle("data/processed/" + "B_raw_" + timestamp + ".pkl")
+with open("data/processed/" + "B_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
 
@@ -308,6 +305,14 @@ flr, flt = calc_scales_stats(
     [proton_int.Vx, proton_int.Vy, proton_int.Vz], "V", proton_params
 )
 
-flr.to_pickle("data/processed/" + "V_raw.pkl")
-with open("data/processed/" + "V_turb.pkl", "wb") as file:
+flr.to_pickle("data/processed/" + "V_raw_" + timestamp + ".pkl")
+with open("data/processed/" + "V_turb_" + timestamp + ".pkl", "wb") as file:
+    pickle.dump(flt, file)
+
+
+# PROTON DENSITY: SCALAR
+flr, flt = calc_scales_stats([proton_int.np], "np", proton_params)
+
+flr.to_pickle("data/processed/" + "np_raw_" + timestamp + ".pkl")
+with open("data/processed/" + "np_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)
