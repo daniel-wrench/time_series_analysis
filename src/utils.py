@@ -1,38 +1,15 @@
+import scipy.signal as signal
 import pandas as pd
 import numpy as np
-import random
 import matplotlib.pyplot as plt
 import cdflib
-from pprint import pprint
-import scipy.signal as signal
-
 import statsmodels.api as sm
-
+from pprint import pprint
 from scipy.optimize import curve_fit
-from scipy.interpolate import UnivariateSpline
+import random
 
-
-def calc_sfn(data, p, freq=1, max_lag_prop=0.2):
-    # Calculate lags
-    lag_function = {}
-    for i in np.arange(
-        1, round(max_lag_prop * len(data))
-    ):  # Limiting maximum lag to 20% of dataset length
-        lag_function[i] = data.diff(i)
-
-    # Initialise dataframe
-    structure_functions = pd.DataFrame(index=np.arange(1, len(data)))
-
-    # Converting lag values from points to seconds
-    structure_functions["lag"] = structure_functions.index / freq
-
-    for order in p:
-        lag_dataframe = (
-            pd.DataFrame(lag_function) ** order
-        )  # or put in .abs() before order: this only changes the odd-ordered functions
-        structure_functions[str(order)] = pd.DataFrame(lag_dataframe.mean())
-
-    return structure_functions.dropna()
+plt.rcParams.update({"font.size": 9})
+plt.rc("text", usetex=True)
 
 
 # Get MSE between two curves
@@ -120,7 +97,7 @@ def convert_cdf_to_dataframe(
       varlist: list of strings. Specify the variables to include in the resulting DataFrame as they appear in the .cdf file.
                Multi-dimensional attributes are split into multiple columns with the names attribute_x
     """
-    if varlist == None:
+    if varlist is None:
         varlist = (
             cdf_file_object.cdf_info()["rVariables"]
             + cdf_file_object.cdf_info()["zVariables"]
@@ -278,9 +255,6 @@ def print_cdf_info(file_path: str) -> None:
     pprint(read_cdf(file_path).cdf_info())
 
 
-# Calculate 3D power spectrum
-
-
 def SmoothySpec(a, nums=None):
     """Smooth a curve using a moving average smoothing"""
     b = a.copy()
@@ -303,30 +277,45 @@ def fitpowerlaw(ax, ay, xi, xf):
 
 def compute_spectral_stats(
     time_series,
-    f_min_inertial,
-    f_max_inertial,
-    f_min_kinetic,
-    f_max_kinetic,
+    f_min_inertial=None,
+    f_max_inertial=None,
+    f_min_kinetic=None,
+    f_max_kinetic=None,
     timestamp=None,
     di=None,
     velocity=None,
     plot=False,
 ):
-    """Compute the autocorrelation function for a scalar or vector time series.
+    """Computes the power spectrum for a scalar or vector time series.
+    Also computes the power-law fit in the inertial and kinetic ranges,
+    and the spectral break between the two ranges, if specified.
 
     ### Args:
 
-    - time_series: list of 1 (scalar) or 3 (vector) pd.Series
-    - di: (Optional, only used for plotting) Ion inertial length in km
+    - time_series: list of 1 (scalar) or 3 (vector) pd.Series. The function automatically detects
+    the cadence if timestamped index, otherwise dt = 1s
+    - f_min_inertial: (Optional) Minimum frequency for the power-law fit in the inertial range
+    - f_max_inertial: (Optional) Maximum frequency for the power-law fit in the inertial range
+    - f_min_kinetic: (Optional) Minimum frequency for the power-law fit in the kinetic range
+    - f_max_kinetic: (Optional) Maximum frequency for the power-law fit in the kinetic range
     - timestamp: (Optional, only used for plotting) Timestamp of the data
+    - di: (Optional, only used for plotting) Ion inertial length in km
     - velocity: (Optional, only used for plotting) Solar wind velocity in km/s
-    - corr_scale: (Optional, only used for plotting) Correlation scale (seconds)
-    - taylor_scale: (Optional, only used for plotting) Taylor scale (seconds)
+    - plot: (Optional) Whether to plot the PSD
+
     ### Returns:
 
     - z_i: Slope in the inertial range
     - z_k: Slope in the kinetic range
     - spectral_break: Frequency of the spectral break between the two ranges
+    - f_periodogram: Frequency array of the periodogram
+    - power_periodogram: Power array of the periodogram
+    - p_smooth: Smoothed power array of the periodogram
+    - xi: Frequency array of the power-law fit in the inertial range
+    - xk: Frequency array of the power-law fit in the kinetic range
+    - pi: Power array of the power-law fit in the inertial range
+    - pk: Power array of the power-law fit in the kinetic range
+
 
     """
 
@@ -373,6 +362,7 @@ def compute_spectral_stats(
     # Slowest part of this function - takes ~ 10 seconds
     p_smooth = SmoothySpec(power_periodogram)
 
+    # If the user has specified a range for the power-law fits
     if f_min_inertial is not None:
         qk, xk, pk = fitpowerlaw(
             f_periodogram, p_smooth, f_min_kinetic, f_max_kinetic
@@ -384,22 +374,23 @@ def compute_spectral_stats(
         try:
             powerlaw_intersection = np.roots(qk - qi)
             spectral_break = np.exp(powerlaw_intersection)
-        except:
-            print("could not compute power-law intersection")
+        except Exception as e:
+            print("could not compute power-law intersection: {}".format(e))
             spectral_break = [np.nan]
 
         if round(spectral_break[0], 4) == 0 or spectral_break[0] > 1:
             spectral_break = [np.nan]
+
     else:
         qi = [np.nan]
         qk = [np.nan]
         spectral_break = [np.nan]
-        xi = [np.nan]  # Do we really need these four?
+        xi = [np.nan]
         xk = [np.nan]
         pi = [np.nan]
         pk = [np.nan]
 
-    if plot == True:
+    if plot is True:
         fig, ax = plt.subplots(figsize=(3.3, 2), constrained_layout=True)
         ax.set_ylim(1e-6, 1e6)
 
@@ -414,6 +405,7 @@ def compute_spectral_stats(
             f_periodogram, p_smooth, label="Smoothed periodogram", color="black"
         )
 
+        # If the power-law fits have succeeded, plot them
         if not np.isnan(qi[0]):
             ax.semilogy(
                 xi,
@@ -435,6 +427,7 @@ def compute_spectral_stats(
                     qk[0]
                 ),
             )
+
         ax.tick_params(which="both", direction="in")
         ax.semilogx()
 
@@ -513,8 +506,10 @@ def compute_nd_acf(time_series, nlags, plot=False):
 
     Args:
 
-    - time_series: list of 1 (scalar) or 3 (vector) pd.Series
+    - time_series: list of 1 (scalar) or 3 (vector) pd.Series. The function automatically detects
+    the cadence if timestamped index, otherwise dt = 1s.
     - nlags: The number of lags to calculate the ACF up to
+    - plot: Whether to plot the ACF
 
     Returns:
 
@@ -528,6 +523,7 @@ def compute_nd_acf(time_series, nlags, plot=False):
 
     if np_array.shape[0] == 3:
         acf = (
+            # missing="conservative" ignores NaNs when computing the ACF
             sm.tsa.acf(np_array[0], fft=True, nlags=nlags, missing="conservative")
             + sm.tsa.acf(np_array[1], fft=True, nlags=nlags, missing="conservative")
             + sm.tsa.acf(np_array[2], fft=True, nlags=nlags, missing="conservative")
@@ -586,9 +582,6 @@ def compute_nd_acf(time_series, nlags, plot=False):
     return time_lags, acf
 
 
-# previous version called estimate_correlation_scale()
-
-
 def compute_outer_scale_exp_trick(
     autocorrelation_x: np.ndarray, autocorrelation_y: np.ndarray, plot=False
 ):
@@ -613,9 +606,7 @@ def compute_outer_scale_exp_trick(
 
             try:
                 # Optional plotting, set up to eventually display all 3 corr scale methods
-                if plot == True:
-                    dt = autocorrelation_x[1] - autocorrelation_x[0]
-
+                if plot is True:
                     fig, ax = plt.subplots(
                         1, 1, figsize=(3.3, 2.5), constrained_layout=True
                     )
@@ -690,7 +681,7 @@ def compute_outer_scale_exp_fit(
     lambda_c = c_opt[0]
 
     # Optional plotting
-    if plot == True:
+    if plot is True:
         if fig is not None and ax is not None:
             fig = fig
             ax = ax
@@ -716,7 +707,7 @@ def compute_outer_scale_integral(time_lags, acf, fig=None, ax=None, plot=False):
     integral = np.sum(acf[:idx]) * dt  # Computing integral up to that index
 
     # Optional plotting
-    if plot == True:
+    if plot is True:
         # Optional plotting
         if fig is not None and ax is not None:
             fig = fig
@@ -766,7 +757,7 @@ def compute_taylor_scale(time_lags, acf, tau_fit, plot=False, show_intercept=Fal
     extended_parabola_x = np.arange(0, 1.2 * lambda_t, 0.1)
     extended_parabola_y = para_fit(extended_parabola_x, *t_opt)
 
-    if plot == True:
+    if plot is True:
         fig, ax = plt.subplots(2, 1, figsize=(3.3, 4), constrained_layout=True)
         # fig.subplots_adjust(hspace=0.1, left=0.2, top=0.8)
 
@@ -798,10 +789,9 @@ def compute_taylor_scale(time_lags, acf, tau_fit, plot=False, show_intercept=Fal
         ax[0].set_xlim(-1, 45)
         ax[0].set_ylim(0.986, 1.001)
 
-        if show_intercept == True:
+        if show_intercept is True:
             ax[0].set_ylim(0, 1.05)
             ax[0].set_xlim(-1, 200)  # lambda_t/dt + 5
-
             ax[0].axvline(lambda_t / dt, ls="dotted", c="black", alpha=0.6)
 
         ax[0].set_xlabel("$\\tau$ (lags)")
