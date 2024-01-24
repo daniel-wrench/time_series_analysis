@@ -5,6 +5,9 @@
 # Note that it is designed to be able to loop over a dictionary of dictionaries
 # of turbulent quantities of various time series for a single interval
 
+# TO-DO: Simplify by not inputting a separate 'r' raw time series file, just access
+# it from the turbulent statistics dictionary file
+
 import glob
 import pickle
 import pandas as pd

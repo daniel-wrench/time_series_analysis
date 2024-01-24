@@ -2,8 +2,12 @@
 
 # Add table underneath each plot that gives the loss (MSE, MAPE) between the clean statistic
 # and gapped statistic for each gap-handling method
+# Add BT option for power spectrum 
+# Add equivalent spectra to PSD plot
 # Add dataset: FBm
-# Add other gap-handling methods
+# Add other gap-handling methods: Spline, FBB and SSA
+
+# Update caching: https://blog.streamlit.io/introducing-two-new-caching-commands-to-replace-st-cache/ 
 
 import pandas as pd
 import streamlit as st
