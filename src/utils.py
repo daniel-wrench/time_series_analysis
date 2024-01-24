@@ -11,75 +11,87 @@ import statsmodels.api as sm
 from scipy.optimize import curve_fit
 from scipy.interpolate import UnivariateSpline
 
+
 def calc_sfn(data, p, freq=1, max_lag_prop=0.2):
-    #Calculate lags
+    # Calculate lags
     lag_function = {}
-    for i in np.arange(1, round(max_lag_prop*len(data))): #Limiting maximum lag to 20% of dataset length
+    for i in np.arange(
+        1, round(max_lag_prop * len(data))
+    ):  # Limiting maximum lag to 20% of dataset length
         lag_function[i] = data.diff(i)
 
-    #Initialise dataframe
-    structure_functions = pd.DataFrame(index = np.arange(1,len(data)))
+    # Initialise dataframe
+    structure_functions = pd.DataFrame(index=np.arange(1, len(data)))
 
     # Converting lag values from points to seconds
-    structure_functions["lag"] = structure_functions.index/freq 
+    structure_functions["lag"] = structure_functions.index / freq
 
     for order in p:
-        lag_dataframe = pd.DataFrame(lag_function)**order # or put in .abs() before order: this only changes the odd-ordered functions
+        lag_dataframe = (
+            pd.DataFrame(lag_function) ** order
+        )  # or put in .abs() before order: this only changes the odd-ordered functions
         structure_functions[str(order)] = pd.DataFrame(lag_dataframe.mean())
-        
+
     return structure_functions.dropna()
+
 
 # Get MSE between two curves
 def calc_mse(curve1, curve2):
-    mse = np.sum((curve1-curve2)**2)/len(curve1)
+    mse = np.sum((curve1 - curve2) ** 2) / len(curve1)
     if mse == np.inf:
-      mse = np.nan
-    return(mse) 
+        mse = np.nan
+    return mse
+
 
 # Get MAPE between two curves
 def calc_mape(curve1, curve2):
-    curve1 = curve1 + 0.000001 # Have to add this so there is no division by 0
-    mape = np.sum(np.abs((curve1-curve2)/curve1))/len(curve1)
+    curve1 = curve1 + 0.000001  # Have to add this so there is no division by 0
+    mape = np.sum(np.abs((curve1 - curve2) / curve1)) / len(curve1)
     if mape == np.inf:
-      mape = np.nan
-    return(mape) 
+        mape = np.nan
+    return mape
 
-def remove_data(array, proportion, chunks = None, sigma = 0.1):
+
+def remove_data(array, proportion, chunks=None, sigma=0.1):
     num_obs = proportion * len(array)
 
     if chunks is None:
         remove_idx = random.sample(range(len(array)), int(num_obs))
 
     else:
-        mean_obs = num_obs/chunks
-        std = sigma*0.341*2*mean_obs
+        mean_obs = num_obs / chunks
+        std = sigma * 0.341 * 2 * mean_obs
         remove_idx = []
 
-        for i in range(chunks) :
-            num_obs = round(random.gauss(mu = mean_obs, sigma = std))
-            #Comment out the line above and replace num_obs below with mean_obs to revert to equal sized chunks
+        for i in range(chunks):
+            num_obs = round(random.gauss(mu=mean_obs, sigma=std))
+            # Comment out the line above and replace num_obs below with mean_obs to revert to equal sized chunks
             if num_obs < 0:
-                raise Exception('sigma too high, got negative obs')
-            start = random.randrange(start = 1, stop = len(array) - num_obs) #Starting point for each removal should be far enough from the start and end of the series
+                raise Exception("sigma too high, got negative obs")
+            start = random.randrange(
+                start=1, stop=len(array) - num_obs
+            )  # Starting point for each removal should be far enough from the start and end of the series
             remove = np.arange(start, start + num_obs)
 
             remove_idx.extend(remove)
-            
-        prop_missing = len(np.unique(remove_idx))/len(array)
+
+        prop_missing = len(np.unique(remove_idx)) / len(array)
 
         while prop_missing < proportion:
-            start = random.randrange(start = 1, stop = len(array) - num_obs) #Starting point for each removal should be far enough from the start and end of the series
+            start = random.randrange(
+                start=1, stop=len(array) - num_obs
+            )  # Starting point for each removal should be far enough from the start and end of the series
             remove = np.arange(start, start + num_obs)
             remove_idx.extend(remove)
 
-            prop_missing = len(np.unique(remove_idx))/len(array)
+            prop_missing = len(np.unique(remove_idx)) / len(array)
 
-    remove_idx = [int(x) for x in remove_idx] #Converting decimals to integers
+    remove_idx = [int(x) for x in remove_idx]  # Converting decimals to integers
     array_bad = array.copy()
     array_bad[remove_idx] = np.nan
 
     # Will be somewhat different from value specified if removed in chunks
-    prop_removed = np.sum(pd.isna(array_bad))/len(array)
+    prop_removed = np.sum(pd.isna(array_bad)) / len(array)
     idx = np.arange(len(array))
     array_bad_idx = np.delete(idx, remove_idx)
 
@@ -95,11 +107,13 @@ def read_cdf(cdf_file_path: str) -> cdflib.cdfread.CDF:
     try:
         cdf_file_object = cdflib.CDF(cdf_file_path)
     except Exception:
-        raise Exception('Exception while reading file')
+        raise Exception("Exception while reading file")
     return cdf_file_object
 
 
-def convert_cdf_to_dataframe(cdf_file_object: cdflib.cdfread.CDF, varlist=None) -> pd.DataFrame:
+def convert_cdf_to_dataframe(
+    cdf_file_object: cdflib.cdfread.CDF, varlist=None
+) -> pd.DataFrame:
     """
     Convert a cdf file object to a Pandas DataFrame.
     args:
@@ -107,11 +121,17 @@ def convert_cdf_to_dataframe(cdf_file_object: cdflib.cdfread.CDF, varlist=None) 
                Multi-dimensional attributes are split into multiple columns with the names attribute_x
     """
     if varlist == None:
-        varlist = cdf_file_object.cdf_info(
-        )['rVariables'] + cdf_file_object.cdf_info()['zVariables']
+        varlist = (
+            cdf_file_object.cdf_info()["rVariables"]
+            + cdf_file_object.cdf_info()["zVariables"]
+        )
     variables_to_read = varlist.copy()
     for var_name in varlist:
-        if var_name not in cdf_file_object.cdf_info()['rVariables'] + cdf_file_object.cdf_info()['zVariables']:
+        if (
+            var_name
+            not in cdf_file_object.cdf_info()["rVariables"]
+            + cdf_file_object.cdf_info()["zVariables"]
+        ):
             print(f'variable name "{var_name}" not in cdf file; skipping it')
             variables_to_read.remove(var_name)
     result_dict = {}
@@ -120,8 +140,10 @@ def convert_cdf_to_dataframe(cdf_file_object: cdflib.cdfread.CDF, varlist=None) 
         if len(variable_values.shape) == 1:  # single attribute
             result_dict.update({var_name: variable_values})
         else:  # multi-dimensional attribute
-            expanded_dict = {f'{var_name}_{dim_index}': variable_values[:, dim_index] for dim_index in range(
-                variable_values.shape[1])}
+            expanded_dict = {
+                f"{var_name}_{dim_index}": variable_values[:, dim_index]
+                for dim_index in range(variable_values.shape[1])
+            }
             result_dict.update(expanded_dict)
     return pd.DataFrame(result_dict)
 
@@ -132,9 +154,21 @@ def replace_fill_values(dataframe: pd.DataFrame) -> pd.DataFrame:
     args:
       dataframe: pandas dataframe to remove fill values from
     """
-    df_cleaned = dataframe.replace({9.9: np.nan, 999: np.nan, 999.99: np.nan, 999999: np.nan,
-                                    99.99: np.nan, 9999.99: np.nan, 9999999.: np.nan, 99999.99: np.nan,
-                                    99999.9: np.nan, 99999: np.nan}, inplace=False)
+    df_cleaned = dataframe.replace(
+        {
+            9.9: np.nan,
+            999: np.nan,
+            999.99: np.nan,
+            999999: np.nan,
+            99.99: np.nan,
+            9999.99: np.nan,
+            9999999.0: np.nan,
+            99999.99: np.nan,
+            99999.9: np.nan,
+            99999: np.nan,
+        },
+        inplace=False,
+    )
     return df_cleaned
 
 
@@ -144,18 +178,21 @@ def format_epochs(dataframe: pd.DataFrame) -> pd.DataFrame:
     args:
       dataframe: pandas dataframe to format
     """
-    assert type(
-        dataframe) == pd.core.frame.DataFrame, 'Input is not of type DataFrame'
-    assert 'Epoch' in dataframe.columns or 'EPOCH' in dataframe.columns, 'Epoch column does not exist'
+    assert type(dataframe) == pd.core.frame.DataFrame, "Input is not of type DataFrame"
+    assert (
+        "Epoch" in dataframe.columns or "EPOCH" in dataframe.columns
+    ), "Epoch column does not exist"
     result_dataframe = dataframe.copy()
-    result_dataframe['Epoch'] = result_dataframe['Epoch'].apply(
-        lambda x: cdflib.epochs.CDFepoch.to_datetime(x, to_np=True)[0])
-    result_dataframe.rename({'Epoch': 'Timestamp'},
-                            axis='columns', inplace=True)
+    result_dataframe["Epoch"] = result_dataframe["Epoch"].apply(
+        lambda x: cdflib.epochs.CDFepoch.to_datetime(x, to_np=True)[0]
+    )
+    result_dataframe.rename({"Epoch": "Timestamp"}, axis="columns", inplace=True)
     return result_dataframe
 
 
-def resample_time_series(dataframe: pd.DataFrame, cadence: str, agg_types: dict = None) -> pd.DataFrame:
+def resample_time_series(
+    dataframe: pd.DataFrame, cadence: str, agg_types: dict = None
+) -> pd.DataFrame:
     """
     Resample time series data to a regular cadence in order to merge data from different sources.
     args:
@@ -164,26 +201,29 @@ def resample_time_series(dataframe: pd.DataFrame, cadence: str, agg_types: dict 
       agg_types: aggregation types specified for all variables, recommended stay as mean
     """
     if not cadence:
-        return dataframe.set_index('Timestamp')
-    assert type(
-        dataframe) == pd.core.frame.DataFrame, 'Input is not of type DataFrame'
-    assert 'Timestamp' in dataframe.columns, 'Timestamp column does not exist'
+        return dataframe.set_index("Timestamp")
+    assert type(dataframe) == pd.core.frame.DataFrame, "Input is not of type DataFrame"
+    assert "Timestamp" in dataframe.columns, "Timestamp column does not exist"
     if not agg_types:
-        return dataframe.resample(cadence, on='Timestamp').mean()
-    return dataframe.resample(cadence, on='Timestamp').agg(agg_types)
+        return dataframe.resample(cadence, on="Timestamp").mean()
+    return dataframe.resample(cadence, on="Timestamp").agg(agg_types)
 
 
-def join_dataframes_on_timestamp(dataframe_1: pd.DataFrame, dataframe_2: pd.DataFrame) -> pd.DataFrame:
+def join_dataframes_on_timestamp(
+    dataframe_1: pd.DataFrame, dataframe_2: pd.DataFrame
+) -> pd.DataFrame:
     """
     Join dataframes on the Timestamp attribute. Dataframes should be (re)sampled on the same cadence.
     args:
       dataframe_1 and dataframe_2: dataframes to join, must contain a synched, formatted datetime column
     """
-    assert type(
-        dataframe_1.index) == pd.core.indexes.datetimes.DatetimeIndex, 'dataframe_1 does not have a Datetime index'
-    assert type(
-        dataframe_2.index) == pd.core.indexes.datetimes.DatetimeIndex, 'dataframe_2 does not have a Datetime index'
-    joined_df = pd.merge(dataframe_1, dataframe_2, how='outer', on='Timestamp')
+    assert (
+        type(dataframe_1.index) == pd.core.indexes.datetimes.DatetimeIndex
+    ), "dataframe_1 does not have a Datetime index"
+    assert (
+        type(dataframe_2.index) == pd.core.indexes.datetimes.DatetimeIndex
+    ), "dataframe_2 does not have a Datetime index"
+    joined_df = pd.merge(dataframe_1, dataframe_2, how="outer", on="Timestamp")
     return joined_df
 
 
@@ -198,8 +238,10 @@ def mask_outliers(dataframe: pd.DataFrame, threshold_dict: dict) -> pd.DataFrame
         # Selected only non-time columns due to issues with pd.DataFrame.interpolate not handling certain time columns
     result_dataframe = dataframe.copy()
     for column_name, thresholds in threshold_dict.items():
-        result_dataframe[column_name] = result_dataframe[column_name].mask((result_dataframe[column_name] <= thresholds[0]) | (
-            result_dataframe[column_name] >= thresholds[-1]))
+        result_dataframe[column_name] = result_dataframe[column_name].mask(
+            (result_dataframe[column_name] <= thresholds[0])
+            | (result_dataframe[column_name] >= thresholds[-1])
+        )
     return result_dataframe
 
 
@@ -221,7 +263,7 @@ def pipeline(file_path, varlist, cadence=None, thresholds={}):
         df = replace_fill_values(df)
         df = format_epochs(df)
         df = mask_outliers(df, thresholds)
-        if cadence not in [0, '0S', None]:
+        if cadence not in [0, "0S", None]:
             df = resample_time_series(df, cadence=cadence)
         # df.set_index('Timestamp', inplace=True)
         return df.sort_index()
@@ -238,19 +280,20 @@ def print_cdf_info(file_path: str) -> None:
 
 # Calculate 3D power spectrum
 
+
 def SmoothySpec(a, nums=None):
     """Smooth a curve using a moving average smoothing"""
     b = a.copy()
     if nums is None:
-        nums = 2*len(b)//3
+        nums = 2 * len(b) // 3
     for i in range(nums):
-        b[i+1:-1] = 0.25*b[i:-2]+0.5*b[i+1:-1]+0.25*b[i+2:]
+        b[i + 1 : -1] = 0.25 * b[i:-2] + 0.5 * b[i + 1 : -1] + 0.25 * b[i + 2 :]
     return b
 
 
 def fitpowerlaw(ax, ay, xi, xf):
-    idxi = np.argmin(abs(ax-xi))
-    idxf = np.argmin(abs(ax-xf))
+    idxi = np.argmin(abs(ax - xi))
+    idxf = np.argmin(abs(ax - xf))
     xx = np.linspace(xi, xf, 100)
     z = np.polyfit(np.log(ax[idxi:idxf]), np.log(ay[idxi:idxf]), 1)
     p = np.poly1d(z)
@@ -258,13 +301,22 @@ def fitpowerlaw(ax, ay, xi, xf):
     return z, xx, pwrl
 
 
-def compute_spectral_stats(np_array, dt, f_min_inertial, f_max_inertial, f_min_kinetic, f_max_kinetic, timestamp=None, di=None, velocity=None, plot=False):
-    """ Compute the autocorrelation function for a scalar or vector time series.
+def compute_spectral_stats(
+    time_series,
+    f_min_inertial,
+    f_max_inertial,
+    f_min_kinetic,
+    f_max_kinetic,
+    timestamp=None,
+    di=None,
+    velocity=None,
+    plot=False,
+):
+    """Compute the autocorrelation function for a scalar or vector time series.
 
     ### Args:
 
-    - np_array: Array of shape (1,n) or (3,n)
-    - dt: Cadence of measurements, or time between each sample: one sample every dt seconds
+    - time_series: list of 1 (scalar) or 3 (vector) pd.Series
     - di: (Optional, only used for plotting) Ion inertial length in km
     - timestamp: (Optional, only used for plotting) Timestamp of the data
     - velocity: (Optional, only used for plotting) Solar wind velocity in km/s
@@ -277,115 +329,192 @@ def compute_spectral_stats(np_array, dt, f_min_inertial, f_max_inertial, f_min_k
     - spectral_break: Frequency of the spectral break between the two ranges
 
     """
-    x_freq = 1/dt
-    
-    if np_array.shape[0] == 3: # If the input is a vector
+
+    # Check if the data has a timestamp index
+    if isinstance(time_series[0].index, pd.DatetimeIndex):
+        # Get the cadence of the data
+        dt = time_series[0].index[1] - time_series[0].index[0]
+        dt = dt.total_seconds()
+    else:
+        # If not, assume 1 second cadence
+        dt = 1
+
+    x_freq = 1 / dt
+
+    # Convert the time series into a numpy array
+    np_array = np.array(time_series)
+
+    if np_array.shape[0] == 3:  # If the input is a vector
         f_periodogram, power_periodogram_0 = signal.periodogram(
-            np_array[0], fs=x_freq, window="boxcar", scaling="density")
-        power_periodogram_0 = (x_freq/2)*power_periodogram_0
+            np_array[0], fs=x_freq, window="boxcar", scaling="density"
+        )
+        power_periodogram_0 = (x_freq / 2) * power_periodogram_0
 
         f_periodogram, power_periodogram_1 = signal.periodogram(
-            np_array[1], fs=x_freq, window="boxcar", scaling="density")
-        power_periodogram_1 = (x_freq/2)*power_periodogram_1
+            np_array[1], fs=x_freq, window="boxcar", scaling="density"
+        )
+        power_periodogram_1 = (x_freq / 2) * power_periodogram_1
 
         f_periodogram, power_periodogram_2 = signal.periodogram(
-            np_array[2], fs=x_freq, window="boxcar", scaling="density")
-        power_periodogram_2 = (x_freq/2)*power_periodogram_2
+            np_array[2], fs=x_freq, window="boxcar", scaling="density"
+        )
+        power_periodogram_2 = (x_freq / 2) * power_periodogram_2
 
-        power_periodogram = (power_periodogram_0 +
-                            power_periodogram_1 + power_periodogram_2)/3
-        
-    elif np_array.shape[0] == 1: # If the input is a scalar
+        power_periodogram = (
+            power_periodogram_0 + power_periodogram_1 + power_periodogram_2
+        ) / 3
+
+    elif np_array.shape[0] == 1:  # If the input is a scalar
         f_periodogram, power_periodogram = signal.periodogram(
-            np_array[0], fs=x_freq, window="boxcar", scaling="density")
-        power_periodogram = (x_freq/2)*power_periodogram
+            np_array[0], fs=x_freq, window="boxcar", scaling="density"
+        )
+        power_periodogram = (x_freq / 2) * power_periodogram
 
     # Slowest part of this function - takes ~ 10 seconds
     p_smooth = SmoothySpec(power_periodogram)
 
-    qk, xk, pk = fitpowerlaw(f_periodogram, p_smooth,
-                             f_min_kinetic, f_max_kinetic)  # Kinetic range
-    qi, xi, pi = fitpowerlaw(f_periodogram, p_smooth,
-                             f_min_inertial, f_max_inertial)  # Inertial range
+    if f_min_inertial is not None:
+        qk, xk, pk = fitpowerlaw(
+            f_periodogram, p_smooth, f_min_kinetic, f_max_kinetic
+        )  # Kinetic range
+        qi, xi, pi = fitpowerlaw(
+            f_periodogram, p_smooth, f_min_inertial, f_max_inertial
+        )  # Inertial range
 
-    try:
-        powerlaw_intersection = np.roots(qk-qi)
-        spectral_break = np.exp(powerlaw_intersection)
-    except:
-        print("could not compute power-law intersection")
-        spectral_break = [np.nan]
+        try:
+            powerlaw_intersection = np.roots(qk - qi)
+            spectral_break = np.exp(powerlaw_intersection)
+        except:
+            print("could not compute power-law intersection")
+            spectral_break = [np.nan]
 
-    if round(spectral_break[0], 4) == 0 or spectral_break[0] > 1:
+        if round(spectral_break[0], 4) == 0 or spectral_break[0] > 1:
+            spectral_break = [np.nan]
+    else:
+        qi = [np.nan]
+        qk = [np.nan]
         spectral_break = [np.nan]
+        xi = [np.nan]  # Do we really need these four?
+        xk = [np.nan]
+        pi = [np.nan]
+        pk = [np.nan]
 
     if plot == True:
         fig, ax = plt.subplots(figsize=(3.3, 2), constrained_layout=True)
         ax.set_ylim(1e-6, 1e6)
 
-        ax.semilogy(f_periodogram, power_periodogram,
-                    label="Raw periodogram", color="black", alpha=0.2)
-        ax.semilogy(f_periodogram, p_smooth,
-                    label="Smoothed periodogram", color="black")
-        ax.semilogy(xi, pi*3, c="black", ls='--', lw=0.8,
-                    label="Inertial range power-law fit: $\\alpha_i$ = {0:.2f}".format(qi[0]))
-        ax.semilogy(xk, pk*3, c="black", ls='--', lw=0.8,
-                    label="Kinetic range power-law fit: $\\alpha_k$ = {0:.2f}".format(qk[0]))
-        ax.tick_params(which="both", direction='in')
+        ax.semilogy(
+            f_periodogram,
+            power_periodogram,
+            label="Raw periodogram",
+            color="black",
+            alpha=0.2,
+        )
+        ax.semilogy(
+            f_periodogram, p_smooth, label="Smoothed periodogram", color="black"
+        )
+
+        if not np.isnan(qi[0]):
+            ax.semilogy(
+                xi,
+                pi * 3,
+                c="black",
+                ls="--",
+                lw=0.8,
+                label="Inertial range power-law fit: $\\alpha_i$ = {0:.2f}".format(
+                    qi[0]
+                ),
+            )
+            ax.semilogy(
+                xk,
+                pk * 3,
+                c="black",
+                ls="--",
+                lw=0.8,
+                label="Kinetic range power-law fit: $\\alpha_k$ = {0:.2f}".format(
+                    qk[0]
+                ),
+            )
+        ax.tick_params(which="both", direction="in")
         ax.semilogx()
 
         if spectral_break[0] is not np.nan:
             ax.axvline(
-                np.exp(np.roots(qk-qi)),
+                np.exp(np.roots(qk - qi)),
                 alpha=0.6,
                 color="black",
-                label="Spectral break: $f_d={0:.2f}$".format(spectral_break[0]))
+                label="Spectral break: $f_d={0:.2f}$".format(spectral_break[0]),
+            )
 
         # Adding in proton inertial frequency
         if di is not None and velocity is not None:
-            f_di = velocity/(2*np.pi*di)
+            f_di = velocity / (2 * np.pi * di)
             ax.axvline(
                 f_di,
                 color="black",
                 alpha=0.6,
-                label="Proton inertial frequency: $f_{di}=$" + "{0:.2f}".format(f_di))
-            ax.text(f_di*1.2, 1e-5, "$f_{{di}}$")
+                label="Proton inertial frequency: $f_{di}=$" + "{0:.2f}".format(f_di),
+            )
+            ax.text(f_di * 1.2, 1e-5, "$f_{{di}}$")
 
-        #bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.5)
-        ax.text(xi[0]*5, pi[0], "$f^{q_i}$")
-        ax.text(xk[0]*2, pk[0], "$f^{q_k}$")
-        ax.text(spectral_break[0]/2, 1e-5, "$f_b$")
+        # bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.5)
+        ax.text(xi[0] * 5, pi[0], "$f^{q_i}$")
+        ax.text(xk[0] * 2, pk[0], "$f^{q_k}$")
+        ax.text(spectral_break[0] / 2, 1e-5, "$f_b$")
 
         if timestamp is not None:
             # Add box with timestamp and values of qi and qk
-            textstr = '\n'.join((
-                str(timestamp[:-3]) + "-" + "23:59", # NOTE - this is a hacky way to get the end timestamp
-                r'$q_i=%.2f$' % (qi[0], ),
-                r'$q_k=%.2f$' % (qk[0], ),
-                r'$f_b=%.2f$' % (spectral_break[0], ),
-                r'$f_{{di}}=%.2f$' % (f_di, )))
-            props = dict(boxstyle='round', facecolor='gray', alpha=0.2)
+            textstr = "\n".join(
+                (
+                    str(timestamp[:-3])
+                    + "-"
+                    + "23:59",  # NOTE - this is a hacky way to get the end timestamp
+                    r"$q_i=%.2f$" % (qi[0],),
+                    r"$q_k=%.2f$" % (qk[0],),
+                    r"$f_b=%.2f$" % (spectral_break[0],),
+                    r"$f_{{di}}=%.2f$" % (f_di,),
+                )
+            )
+            props = dict(boxstyle="round", facecolor="gray", alpha=0.2)
             # Place the text box. (x, y) position is in axis coordinates.
-            ax.text(0.05, 0.1, textstr, transform=ax.transAxes, fontsize=8,
-                    verticalalignment='bottom', bbox=props)
-        
-        ax.set_xlabel('frequency (Hz)')
-        ax.set_ylabel('PSD (nT$^2$Hz$^{-1}$)')
+            ax.text(
+                0.05,
+                0.1,
+                textstr,
+                transform=ax.transAxes,
+                fontsize=8,
+                verticalalignment="bottom",
+                bbox=props,
+            )
+
+        ax.set_xlabel("frequency (Hz)")
+        ax.set_ylabel("PSD (nT$^2$Hz$^{-1}$)")
         # plt.grid()
         # plt.show()
 
         return qi[0], qk[0], spectral_break[0], f_periodogram, p_smooth, fig, ax
     else:
-        return qi[0], qk[0], spectral_break[0], f_periodogram, power_periodogram, p_smooth, xi, xk, pi, pk
+        return (
+            qi[0],
+            qk[0],
+            spectral_break[0],
+            f_periodogram,
+            power_periodogram,
+            p_smooth,
+            xi,
+            xk,
+            pi,
+            pk,
+        )
 
 
-def compute_nd_acf(np_array, nlags, dt, plot=False):
-    """ Compute the autocorrelation function for a scalar or vector time series.
+def compute_nd_acf(time_series, nlags, plot=False):
+    """Compute the autocorrelation function for a scalar or vector time series.
 
     Args:
 
-    - np_array: Array of shape (1,n) or (3,n)
+    - time_series: list of 1 (scalar) or 3 (vector) pd.Series
     - nlags: The number of lags to calculate the ACF up to
-    - dt: Cadence of measurements, or time between each sample: one sample every dt seconds
 
     Returns:
 
@@ -394,12 +523,15 @@ def compute_nd_acf(np_array, nlags, dt, plot=False):
 
     """
 
-    # Previously Kevin had fft=False - this was far slower
+    # Convert the time series into a numpy array
+    np_array = np.array(time_series)
+
     if np_array.shape[0] == 3:
-        acf = \
-            sm.tsa.acf(np_array[0], fft=True, nlags=nlags) + \
-            sm.tsa.acf(np_array[1], fft=True, nlags=nlags) + \
-            sm.tsa.acf(np_array[2], fft=True, nlags=nlags)
+        acf = (
+            sm.tsa.acf(np_array[0], fft=True, nlags=nlags, missing="conservative")
+            + sm.tsa.acf(np_array[1], fft=True, nlags=nlags, missing="conservative")
+            + sm.tsa.acf(np_array[2], fft=True, nlags=nlags, missing="conservative")
+        )
         acf /= 3
 
     elif np_array.shape[0] == 1:
@@ -407,18 +539,27 @@ def compute_nd_acf(np_array, nlags, dt, plot=False):
 
     else:
         raise ValueError(
-            "Array is not 3D or 1D. If after a 1D acf, try putting square brackets around the pandas series in np.array()")
+            "Array is not 3D or 1D. If after a 1D acf, try putting square brackets around the pandas series in np.array()"
+        )
 
-    time_lags = np.arange(0, nlags+1)*dt
+    # Check if the data has a timestamp index
+    if isinstance(time_series[0].index, pd.DatetimeIndex):
+        # Get the cadence of the data
+        dt = time_series[0].index[1] - time_series[0].index[0]
+        dt = dt.total_seconds()
+    else:
+        # If not, assume 1 second cadence
+        dt = 1
+
+    time_lags = np.arange(0, nlags + 1) * dt
 
     # Optional plotting
-    if plot == True:
-
+    if plot is True:
         fig, ax = plt.subplots(constrained_layout=True)
 
         ax.plot(time_lags, acf)
-        ax.set_xlabel('$\\tau$ (sec)')
-        ax.set_ylabel('Autocorrelation')
+        ax.set_xlabel("$\\tau$ (sec)")
+        ax.set_ylabel("Autocorrelation")
 
         # For plotting secondary axes
         def sec2lag(x):
@@ -427,8 +568,8 @@ def compute_nd_acf(np_array, nlags, dt, plot=False):
         def lag2sec(x):
             return x * dt
 
-        secax_x = ax.secondary_xaxis('top', functions=(sec2lag, lag2sec))
-        secax_x.set_xlabel('$\\tau$ (lag)')
+        secax_x = ax.secondary_xaxis("top", functions=(sec2lag, lag2sec))
+        secax_x.set_xlabel("$\\tau$ (lag)")
 
         def sec2km(x):
             return x * 400
@@ -438,16 +579,19 @@ def compute_nd_acf(np_array, nlags, dt, plot=False):
 
         # use of a float for the position:
         secax_x2 = ax.secondary_xaxis(-0.2, functions=(sec2km, km2sec))
-        secax_x2.set_xlabel('$r$ (km)')
+        secax_x2.set_xlabel("$r$ (km)")
 
         plt.show()
 
     return time_lags, acf
 
+
 # previous version called estimate_correlation_scale()
 
 
-def compute_outer_scale_exp_trick(autocorrelation_x: np.ndarray, autocorrelation_y: np.ndarray, plot=False):
+def compute_outer_scale_exp_trick(
+    autocorrelation_x: np.ndarray, autocorrelation_y: np.ndarray, plot=False
+):
     """
     computes the correlation scale through the "1/e" estimation method.
     autocorrelation_x assumed already in time scale
@@ -461,7 +605,7 @@ def compute_outer_scale_exp_trick(autocorrelation_x: np.ndarray, autocorrelation
             x1 = autocorrelation_x[idx_1]
             y1 = autocorrelation_y[idx_1]
             y2 = autocorrelation_y[idx_2]
-            x_opt = x1 + ((y1 - np.exp(-1))/(y1-y2))*(x2-x1)
+            x_opt = x1 + ((y1 - np.exp(-1)) / (y1 - y2)) * (x2 - x1)
             # print(autocorrelation_x[idx_1], autocorrelation_y[idx_1])
             # print(autocorrelation_x[idx_2], autocorrelation_y[idx_2])
             # print('e:', np.exp(-1))
@@ -470,16 +614,22 @@ def compute_outer_scale_exp_trick(autocorrelation_x: np.ndarray, autocorrelation
             try:
                 # Optional plotting, set up to eventually display all 3 corr scale methods
                 if plot == True:
+                    dt = autocorrelation_x[1] - autocorrelation_x[0]
 
-                    dt = autocorrelation_x[1]-autocorrelation_x[0]
+                    fig, ax = plt.subplots(
+                        1, 1, figsize=(3.3, 2.5), constrained_layout=True
+                    )
+                    # fig.subplots_adjust(left=0.2, top=0.8, bottom=0.8)
 
-                    fig, ax = plt.subplots(1, 1, figsize=(3.3, 2.5), constrained_layout=True)
-                    #fig.subplots_adjust(left=0.2, top=0.8, bottom=0.8)
-
-                    ax.plot(autocorrelation_x / 1000, autocorrelation_y,
-                            c='black', label="Autocorrelation", lw=0.5)
-                    ax.set_xlabel('$\\tau (10^3$ s)')
-                    ax.set_ylabel('$R(\\tau)$')
+                    ax.plot(
+                        autocorrelation_x / 1000,
+                        autocorrelation_y,
+                        c="black",
+                        label="Autocorrelation",
+                        lw=0.5,
+                    )
+                    ax.set_xlabel("$\\tau (10^3$ s)")
+                    ax.set_ylabel("$R(\\tau)$")
 
                     def sec2km(x):
                         return x * 1000 * 400 / 1e6
@@ -488,15 +638,20 @@ def compute_outer_scale_exp_trick(autocorrelation_x: np.ndarray, autocorrelation
                         return x / 1000 / 400 * 1e6
 
                     # use of a float for the position:
-                    secax_x2 = ax.secondary_xaxis(
-                        'top', functions=(sec2km, km2sec))
-                    secax_x2.set_xlabel('$r$ ($10^6$ km)')
-                    secax_x2.tick_params(which="both", direction='in')
-                    ax.axhline(np.exp(-1), color='black', ls='--',
-                               label="$1/e\\rightarrow\\lambda_C^{{1/e}}$={:.0f}s".format(x_opt[0]))
-                    ax.axvline(x_opt[0] / 1000, color='black', ls='--')
-                    ax.tick_params(which="both", direction='in')
-                    #label="$1/e\\rightarrow \lambda_C^{1/e}=${:.0f}s".format(x_opt[0]))
+                    secax_x2 = ax.secondary_xaxis("top", functions=(sec2km, km2sec))
+                    secax_x2.set_xlabel("$r$ ($10^6$ km)")
+                    secax_x2.tick_params(which="both", direction="in")
+                    ax.axhline(
+                        np.exp(-1),
+                        color="black",
+                        ls="--",
+                        label="$1/e\\rightarrow\\lambda_C^{{1/e}}$={:.0f}s".format(
+                            x_opt[0]
+                        ),
+                    )
+                    ax.axvline(x_opt[0] / 1000, color="black", ls="--")
+                    ax.tick_params(which="both", direction="in")
+                    # label="$1/e\\rightarrow \lambda_C^{1/e}=${:.0f}s".format(x_opt[0]))
                     return round(x_opt[0], 3), fig, ax
                 else:
                     return round(x_opt[0], 3)
@@ -511,22 +666,27 @@ def exp_fit(r, lambda_c):
     """
     fit function for determining correlation scale, through the optimal lambda_c value
     """
-    return np.exp(-1*r/lambda_c)
+    return np.exp(-1 * r / lambda_c)
 
 
 def para_fit(x, a):
     """
     fit function for determining taylor scale, through the optimal lambda_c value
     """
-    return a*x**2 + 1
+    return a * x**2 + 1
 
 
-def compute_outer_scale_exp_fit(time_lags, acf, seconds_to_fit, fig=None, ax=None, plot=False):
-
-    dt = time_lags[1]-time_lags[0]
-    num_lags_for_lambda_c_fit = int(seconds_to_fit/dt)
+def compute_outer_scale_exp_fit(
+    time_lags, acf, seconds_to_fit, fig=None, ax=None, plot=False
+):
+    dt = time_lags[1] - time_lags[0]
+    num_lags_for_lambda_c_fit = int(seconds_to_fit / dt)
     c_opt, c_cov = curve_fit(
-        exp_fit, time_lags[:num_lags_for_lambda_c_fit], acf[:num_lags_for_lambda_c_fit], p0=1000)
+        exp_fit,
+        time_lags[:num_lags_for_lambda_c_fit],
+        acf[:num_lags_for_lambda_c_fit],
+        p0=1000,
+    )
     lambda_c = c_opt[0]
 
     # Optional plotting
@@ -537,13 +697,13 @@ def compute_outer_scale_exp_fit(time_lags, acf, seconds_to_fit, fig=None, ax=Non
 
             ax.plot(
                 np.array(range(int(seconds_to_fit))) / 1000,
-                exp_fit(
-                    np.array(range(int(seconds_to_fit))),
-                    *c_opt
+                exp_fit(np.array(range(int(seconds_to_fit))), *c_opt),
+                label="Exp. fit$\\rightarrow\\lambda_C^{{\\mathrm{{fit}}}}$={:.0f}s".format(
+                    lambda_c
                 ),
-                label="Exp. fit$\\rightarrow\\lambda_C^{{\\mathrm{{fit}}}}$={:.0f}s".format(lambda_c),
                 lw=3,
-                c='black')
+                c="black",
+            )
 
         return lambda_c, fig, ax
     else:
@@ -551,10 +711,9 @@ def compute_outer_scale_exp_fit(time_lags, acf, seconds_to_fit, fig=None, ax=Non
 
 
 def compute_outer_scale_integral(time_lags, acf, fig=None, ax=None, plot=False):
-
-    dt = time_lags[1]-time_lags[0]
+    dt = time_lags[1] - time_lags[0]
     idx = np.argmin(np.abs(acf))  # Getting the index where the ACF falls to 0
-    integral = np.sum(acf[:idx])*dt  # Computing integral up to that index
+    integral = np.sum(acf[:idx]) * dt  # Computing integral up to that index
 
     # Optional plotting
     if plot == True:
@@ -563,10 +722,19 @@ def compute_outer_scale_integral(time_lags, acf, fig=None, ax=None, plot=False):
             fig = fig
             ax = ax
 
-            ax.fill_between(time_lags / 1000, 0, acf, where=acf > 0,
-                            color="black", alpha=0.2, label="Integral$\\rightarrow\\lambda_C^{{\mathrm{{int}}}}$={:.0f}s".format(integral))
-            ax.set_xlabel('$\\tau$ ($10^3$s)')
-            ax.tick_params(which="both", direction='in')
+            ax.fill_between(
+                time_lags / 1000,
+                0,
+                acf,
+                where=acf > 0,
+                color="black",
+                alpha=0.2,
+                label="Integral$\\rightarrow\\lambda_C^{{\mathrm{{int}}}}$={:.0f}s".format(
+                    integral
+                ),
+            )
+            ax.set_xlabel("$\\tau$ ($10^3$s)")
+            ax.tick_params(which="both", direction="in")
             # Plot the legend
             ax.legend(loc="upper right")
 
@@ -587,63 +755,66 @@ def compute_taylor_scale(time_lags, acf, tau_fit, plot=False, show_intercept=Fal
 
     # If using seconds_fit as the fitting argument instead:
 
-    dt = time_lags[1]-time_lags[0]
+    dt = time_lags[1] - time_lags[0]
     # tau_fit = int(seconds_fit/dt)
 
     t_opt, t_cov = curve_fit(
-        para_fit,
-        time_lags[:tau_fit],
-        acf[:tau_fit],
-        p0=10)  # Initial guess for the parameters
-    lambda_t = (-1*t_opt[0])**-.5
+        para_fit, time_lags[:tau_fit], acf[:tau_fit], p0=10
+    )  # Initial guess for the parameters
+    lambda_t = (-1 * t_opt[0]) ** -0.5
 
-    extended_parabola_x = np.arange(0, 1.2*lambda_t, 0.1)
+    extended_parabola_x = np.arange(0, 1.2 * lambda_t, 0.1)
     extended_parabola_y = para_fit(extended_parabola_x, *t_opt)
 
     if plot == True:
-
         fig, ax = plt.subplots(2, 1, figsize=(3.3, 4), constrained_layout=True)
-        #fig.subplots_adjust(hspace=0.1, left=0.2, top=0.8)
+        # fig.subplots_adjust(hspace=0.1, left=0.2, top=0.8)
 
         ax[0].scatter(
-            time_lags/dt, # Plotting firstly in lag space for clearer visualisation 
-            acf, 
-            label="Autocorrelation", 
+            time_lags / dt,  # Plotting firstly in lag space for clearer visualisation
+            acf,
+            label="Autocorrelation",
             s=12,
             c="black",
-            alpha=0.5)
-        
+            alpha=0.5,
+        )
+
         ax[0].plot(
-            (extended_parabola_x/dt),
+            (extended_parabola_x / dt),
             (extended_parabola_y),
-            '-y',
+            "-y",
             label="Parabolic fit \nup to $\\tau_\mathrm{fit}\\rightarrow\\tau_\mathrm{TS}^\mathrm{est}$",
-            c="black")
-        
-        ax[0].axvline(
-            tau_fit*(time_lags[1]/dt-time_lags[0]/dt), 
-            ls='--',
-            #label=f"$\\tau_{{fit}}={tau_fit}$ lags",
             c="black",
-            alpha = 0.6)
+        )
+
+        ax[0].axvline(
+            tau_fit * (time_lags[1] / dt - time_lags[0] / dt),
+            ls="--",
+            # label=f"$\\tau_{{fit}}={tau_fit}$ lags",
+            c="black",
+            alpha=0.6,
+        )
 
         ax[0].set_xlim(-1, 45)
         ax[0].set_ylim(0.986, 1.001)
 
         if show_intercept == True:
             ax[0].set_ylim(0, 1.05)
-            ax[0].set_xlim(-1, 200) #lambda_t/dt + 5
+            ax[0].set_xlim(-1, 200)  # lambda_t/dt + 5
 
-            ax[0].axvline(
-                lambda_t/dt, 
-                ls='dotted',
-                c="black",
-                alpha = 0.6)
+            ax[0].axvline(lambda_t / dt, ls="dotted", c="black", alpha=0.6)
 
-        ax[0].set_xlabel('$\\tau$ (lags)')
-        ax[0].xaxis.set_label_position('top')
-        ax[0].set_ylabel('$R(\\tau)$')
-        ax[0].tick_params(which="both", direction='in', top=True, bottom=False, labeltop=True, labelbottom=False)
+        ax[0].set_xlabel("$\\tau$ (lags)")
+        ax[0].xaxis.set_label_position("top")
+        ax[0].set_ylabel("$R(\\tau)$")
+        ax[0].tick_params(
+            which="both",
+            direction="in",
+            top=True,
+            bottom=False,
+            labeltop=True,
+            labelbottom=False,
+        )
 
         # For plotting secondary axis, in units of r(km)
         def lag2km(x):
@@ -653,13 +824,19 @@ def compute_taylor_scale(time_lags, acf, tau_fit, plot=False, show_intercept=Fal
             return x / (dt * 400)
 
         secax_x = ax[0].secondary_xaxis(1.3, functions=(lag2km, km2lag))
-        secax_x.set_xlabel('$r$ (km)')
-        secax_x.tick_params(which="both", direction='in')
+        secax_x.set_xlabel("$r$ (km)")
+        secax_x.tick_params(which="both", direction="in")
 
         ax[0].legend(loc="upper right")
-        ax[0].annotate('(a)', (2, 0.9875), transform=ax[0].transAxes, size=12)
-        ax[0].annotate('$\\tau_\mathrm{fit}$', (10, 0.9875), transform=ax[0].transAxes, size=12, alpha=0.6)
-        #ax[0].annotate('$\\tau_\mathrm{TS}^\mathrm{est}\\rightarrow=$', (35, 0.9875), transform=ax[0].transAxes, size=10, alpha=0.6)
+        ax[0].annotate("(a)", (2, 0.9875), transform=ax[0].transAxes, size=12)
+        ax[0].annotate(
+            "$\\tau_\mathrm{fit}$",
+            (10, 0.9875),
+            transform=ax[0].transAxes,
+            size=12,
+            alpha=0.6,
+        )
+        # ax[0].annotate('$\\tau_\mathrm{TS}^\mathrm{est}\\rightarrow=$', (35, 0.9875), transform=ax[0].transAxes, size=10, alpha=0.6)
 
         return lambda_t, fig, ax
 
@@ -667,7 +844,18 @@ def compute_taylor_scale(time_lags, acf, tau_fit, plot=False, show_intercept=Fal
         return lambda_t
 
 
-def compute_taylor_chuychai(time_lags, acf, tau_min, tau_max, fig=None, ax=None, q=None, tau_fit_single=None, save=False, figname=""):
+def compute_taylor_chuychai(
+    time_lags,
+    acf,
+    tau_min,
+    tau_max,
+    fig=None,
+    ax=None,
+    q=None,
+    tau_fit_single=None,
+    save=False,
+    figname="",
+):
     """Compute a refined estimate of the Taylor microscale using a linear extrapolation method from Chuychai et al. (2014).
 
     Args:
@@ -679,9 +867,9 @@ def compute_taylor_chuychai(time_lags, acf, tau_min, tau_max, fig=None, ax=None,
     - q: Slope of the dissipation range
     """
 
-    dt = time_lags[1]-time_lags[0]
+    dt = time_lags[1] - time_lags[0]
 
-    tau_fit = np.arange(tau_min, tau_max+1)
+    tau_fit = np.arange(tau_min, tau_max + 1)
     tau_ts = np.array([])
 
     for i in tau_fit:
@@ -699,56 +887,72 @@ def compute_taylor_chuychai(time_lags, acf, tau_min, tau_max, fig=None, ax=None,
     ts_est_extra_std = np.sqrt(cov[1, 1])
 
     # Getting extrapolation line for plotting
-    other_x = np.arange(0, tau_max+1)
+    other_x = np.arange(0, tau_max + 1)
     other_y = f(other_x)
 
     # Applying correction factor q from Chuychai et al. (2014)
     if q is not None:
         q_abs = np.abs(q)
         if q_abs < 2:
-            r = -0.64*(1/q_abs)+0.72
+            r = -0.64 * (1 / q_abs) + 0.72
         elif q_abs >= 2 and q_abs < 4.5:
-            r = -2.61*(1/q_abs)+1.7
+            r = -2.61 * (1 / q_abs) + 1.7
         elif q_abs >= 4.5:
-            r = -0.16*(1/q_abs)+1.16
+            r = -0.16 * (1 / q_abs) + 1.16
 
     else:
         r = 1
 
-    ts_est = r*ts_est_extra
-    ts_est_std = r*ts_est_extra_std
+    ts_est = r * ts_est_extra
+    ts_est_std = r * ts_est_extra_std
 
     # Optional plotting
     if fig is not None and ax is not None:
-        ax[1].scatter(tau_fit, tau_ts,
-                      label="Fitted values $\\tau_\mathrm{TS}^\mathrm{est}$", 
-                      s=12,
-                      c="black", 
-                      alpha=0.5,
-                      marker="x")
-        
-        ax[1].plot(other_x, other_y,
-                   label="R.E.$\\rightarrow\\tau_\mathrm{{TS}}^\mathrm{{ext}}$={:.0f}s".format(ts_est_extra),
-                   c="black")
+        ax[1].scatter(
+            tau_fit,
+            tau_ts,
+            label="Fitted values $\\tau_\mathrm{TS}^\mathrm{est}$",
+            s=12,
+            c="black",
+            alpha=0.5,
+            marker="x",
+        )
+
+        ax[1].plot(
+            other_x,
+            other_y,
+            label="R.E.$\\rightarrow\\tau_\mathrm{{TS}}^\mathrm{{ext}}$={:.0f}s".format(
+                ts_est_extra
+            ),
+            c="black",
+        )
 
         if tau_fit_single is not None:
             ax[1].axvline(
-                tau_fit_single, 
-                ls='--',
-                #ymin=0.5,
-                #ymax=1,
+                tau_fit_single,
+                ls="--",
+                # ymin=0.5,
+                # ymax=1,
                 c="black",
-                alpha = 0.6)
-        
+                alpha=0.6,
+            )
+
         if q is not None:
-            ax[1].plot(0, ts_est, "*", color="green", label="C.C.$\\rightarrow\\tau_\mathrm{{TS}}$={:.0f}s".format(ts_est), markersize=10)
-        
+            ax[1].plot(
+                0,
+                ts_est,
+                "*",
+                color="green",
+                label="C.C.$\\rightarrow\\tau_\mathrm{{TS}}$={:.0f}s".format(ts_est),
+                markersize=10,
+            )
+
         ax[1].set_xlabel("")
         ax[1].set_xticks([])
 
         ax[1].set_ylabel("$\\tau$(s)")
-        ax[1].tick_params(which="both", direction='in')
-        
+        ax[1].tick_params(which="both", direction="in")
+
         # For plotting secondary axis, units of tau(s)
         def sec2lag(x):
             return x / dt
@@ -757,15 +961,15 @@ def compute_taylor_chuychai(time_lags, acf, tau_min, tau_max, fig=None, ax=None,
             return x * dt
 
         secax_x2 = ax[1].secondary_xaxis(0, functions=(lag2sec, sec2lag))
-        
+
         secax_x2.set_xlabel("$\\tau_\\mathrm{fit}$(s)")
-        secax_x2.tick_params(which="both", direction='in')
+        secax_x2.tick_params(which="both", direction="in")
 
         # Add legend with specific font size
         ax[1].legend(loc="lower right")
-        ax[1].set_xlim(-1, 45) # Set to 200 if wanting to see extrapolation
-        ax[1].set_ylim(-3, max(tau_ts)+1)
-        ax[1].annotate('(b)', (2, 24), size=12)
+        ax[1].set_xlim(-1, 45)  # Set to 200 if wanting to see extrapolation
+        ax[1].set_ylim(-3, max(tau_ts) + 1)
+        ax[1].annotate("(b)", (2, 24), size=12)
 
         return ts_est, ts_est_std, fig, ax
 
