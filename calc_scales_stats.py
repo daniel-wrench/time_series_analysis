@@ -2,6 +2,8 @@
 # Here I show the calculation of all the stats for my time series estimation work. These will be put into a function that returns all of them, which we will then calculate the error of for missing data. Note that streamlit code allows calculation for missing data
 #
 # - Compare utils script to reynolds and update accordingly if needed
+# - View fluctuations instead as an optional parameter to the plotting function, plot mean values
+# - Run filter beforehand
 #
 
 import numpy as np
@@ -38,7 +40,7 @@ import pickle
 # mag_int_hr = data_B["2016-01-01 12:00":]
 
 # print(mag_int_hr.head())
-# mag_int_hr.to_pickle("data/processed/wind/mfi/20160101.pkl")
+# mag_int_hr.to_pickle("data/processed/wind/wind/mfi/20160101.pkl")
 
 # data_protons = utils.pipeline(
 #     proton_file_list[0],
@@ -70,7 +72,7 @@ import pickle
 # proton_int = data_protons["2016-01-01 12:00":]
 
 # print(proton_int.head())
-# proton_int.to_pickle("data/processed/wind/3dp/20160101.pkl")
+# proton_int.to_pickle("data/processed/wind/wind/3dp/20160101.pkl")
 
 # Define analysis functions
 
@@ -124,11 +126,20 @@ def calc_scales_stats(time_series, var_name, params_dict):
     Low-res time series is currently used for ACF and SF,
     high-res for spectrum and taylor scale
 
-
     :param time_series: list of 1 (scalar) or 3 (vector) pd.Series
     :param var_name: str
-    :param params_dict: dict
-    :return: dict
+    :param params_dict: dict of the following parameters:
+        f_min_inertial: float
+        f_max_inertial: float
+        f_min_kinetic: float
+        f_max_kinetic: float
+        nlags_lr: int
+        nlags_hr: int
+        dt_lr: str
+        tau_min: float
+        tau_max: float
+
+    :return: pd.DataFrame, dict
     """
     # Compute autocorrelations and power spectra
 
@@ -250,7 +261,7 @@ def calc_scales_stats(time_series, var_name, params_dict):
 
 timestamp = "20160101"
 
-mag_int_hr = pd.read_pickle("data/processed/wind/mfi/" + timestamp + ".pkl")
+mag_int_hr = pd.read_pickle("data/processed/wind/wind/mfi/" + timestamp + ".pkl")
 
 # Frequency bounds are taken from Wang et al. (2018, JGR)
 mag_params = {
@@ -261,11 +272,12 @@ mag_params = {
     "nlags_lr": 2000,
     "nlags_hr": 100,
     "dt_lr": "5S",
+    # LR version is used for calculation SFN and ACF; original HR for spectrum and taylor scale
     "tau_min": 10,
     "tau_max": 50,
 }
 
-proton_int = pd.read_pickle("data/processed/wind/3dp/" + timestamp + ".pkl")
+proton_int = pd.read_pickle("data/processed/wind/wind/3dp/" + timestamp + ".pkl")
 
 proton_params = {
     "f_min_inertial": None,
@@ -285,8 +297,8 @@ proton_params = {
 flr, flt = calc_scales_stats([mag_int_hr.Bx], "Bx", mag_params)
 
 # Save dictionary for later plotting
-flr.to_pickle("data/processed/" + "Bx_raw_" + timestamp + ".pkl")
-with open("data/processed/" + "Bx_turb_" + timestamp + ".pkl", "wb") as file:
+flr.to_pickle("data/processed/wind/" + "Bx_raw_" + timestamp + ".pkl")
+with open("data/processed/wind/" + "Bx_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
 
@@ -295,8 +307,8 @@ flr, flt = calc_scales_stats(
     [mag_int_hr.Bx, mag_int_hr.By, mag_int_hr.Bz], "B", mag_params
 )
 
-flr.to_pickle("data/processed/" + "B_raw_" + timestamp + ".pkl")
-with open("data/processed/" + "B_turb_" + timestamp + ".pkl", "wb") as file:
+flr.to_pickle("data/processed/wind/" + "B_raw_" + timestamp + ".pkl")
+with open("data/processed/wind/" + "B_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
 
@@ -305,14 +317,14 @@ flr, flt = calc_scales_stats(
     [proton_int.Vx, proton_int.Vy, proton_int.Vz], "V", proton_params
 )
 
-flr.to_pickle("data/processed/" + "V_raw_" + timestamp + ".pkl")
-with open("data/processed/" + "V_turb_" + timestamp + ".pkl", "wb") as file:
+flr.to_pickle("data/processed/wind/" + "V_raw_" + timestamp + ".pkl")
+with open("data/processed/wind/" + "V_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
 
 # PROTON DENSITY: SCALAR
 flr, flt = calc_scales_stats([proton_int.np], "np", proton_params)
 
-flr.to_pickle("data/processed/" + "np_raw_" + timestamp + ".pkl")
-with open("data/processed/" + "np_turb_" + timestamp + ".pkl", "wb") as file:
+flr.to_pickle("data/processed/wind/" + "np_raw_" + timestamp + ".pkl")
+with open("data/processed/wind/" + "np_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)

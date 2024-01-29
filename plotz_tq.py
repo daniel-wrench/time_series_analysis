@@ -176,40 +176,40 @@ plotpoints = 400
 # RAW_DIR=basedir + '/data_processed/'
 # TRB_DIR=basedir + '/data_processed/'
 # tfiles=sorted(glob.glob(TRB_DIR+'e1_8hr_*.p'))
-tfiles = glob.glob("data/processed/B_turb" + timestamp + ".pkl")
+tfiles = glob.glob("data/processed/wind/B_turb" + timestamp + ".pkl")
 # rfiles=sorted(glob.glob(TRB_DIR+'df_e1_8hr_*.p'))
-rfiles = glob.glob("data/processed/B_raw" + timestamp + ".pkl")
+rfiles = glob.glob("data/processed/wind/B_raw" + timestamp + ".pkl")
 
 # Future vars we might want to calculate stats for
 # allnames=['vp','b','np_moment','np','wp_fit','va','b_v','zpp','zmp','sc']
 
 plotz(
-    tfiles=glob.glob("data/processed/B_turb_" + timestamp + ".pkl"),
-    rfiles=glob.glob("data/processed/B_raw_" + timestamp + ".pkl"),
+    tfiles=glob.glob("data/processed/wind/B_turb_" + timestamp + ".pkl"),
+    rfiles=glob.glob("data/processed/wind/B_raw_" + timestamp + ".pkl"),
     name="B",
     plotpoints=400,
     timestamp=timestamp,
 )
 
 plotz(
-    tfiles=glob.glob("data/processed/Bx_turb_" + timestamp + ".pkl"),
-    rfiles=glob.glob("data/processed/Bx_raw_" + timestamp + ".pkl"),
+    tfiles=glob.glob("data/processed/wind/Bx_turb_" + timestamp + ".pkl"),
+    rfiles=glob.glob("data/processed/wind/Bx_raw_" + timestamp + ".pkl"),
     name="Bx",
     plotpoints=400,
     timestamp=timestamp,
 )
 
 plotz(
-    tfiles=glob.glob("data/processed/V_turb_" + timestamp + ".pkl"),
-    rfiles=glob.glob("data/processed/V_raw_" + timestamp + ".pkl"),
+    tfiles=glob.glob("data/processed/wind/V_turb_" + timestamp + ".pkl"),
+    rfiles=glob.glob("data/processed/wind/V_raw_" + timestamp + ".pkl"),
     name="V",
     plotpoints=400,
     timestamp=timestamp,
 )
 
 plotz(
-    tfiles=glob.glob("data/processed/np_turb_" + timestamp + ".pkl"),
-    rfiles=glob.glob("data/processed/np_raw_" + timestamp + ".pkl"),
+    tfiles=glob.glob("data/processed/wind/np_turb_" + timestamp + ".pkl"),
+    rfiles=glob.glob("data/processed/wind/np_raw_" + timestamp + ".pkl"),
     name="np",
     plotpoints=400,
     timestamp=timestamp,
