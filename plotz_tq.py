@@ -84,9 +84,9 @@ def plotz(tfiles, rfiles, name, plotpoints, timestamp):
             ax1.text(d[name]["xi"][0] * 5, d[name]["pi"][0], "$f^{q_i}$")
             ax1.text(d[name]["xk"][0] * 2, d[name]["pk"][0], "$f^{q_k}$")
 
-            if not np.isnan(d[name]["break_s"]):
-                ax1.text(d[name]["break_s"] / 2, 4e-5, "$f_b$")
-                ax1.axvline(d[name]["break_s"], color="black", ls="dotted")
+            if not np.isnan(d[name]["fb"]):
+                ax1.text(d[name]["fb"] / 2, 4e-5, "$f_b$")
+                ax1.axvline(d[name]["fb"], color="black", ls="dotted")
 
                 # Add box with timestamp and values of qi and qk
                 textstr = "\n".join(
@@ -96,7 +96,7 @@ def plotz(tfiles, rfiles, name, plotpoints, timestamp):
                         + "23:59",  # NOTE - this is a hacky way to get the end timestamp
                         r"$q_i=%.2f$" % (d[name]["qi"],),
                         r"$q_k=%.2f$" % (d[name]["qk"],),
-                        r"$f_b=%.2f$" % (d[name]["break_s"],),  # ,
+                        r"$f_b=%.2f$" % (d[name]["fb"],),  # ,
                         # r'$f_{{di}}=%.2f$' % (f_di, )
                     )
                 )
@@ -122,7 +122,7 @@ def plotz(tfiles, rfiles, name, plotpoints, timestamp):
         # else:
         ax2.plot(d[name]["times"], d[name]["cr"], label="ACF")
         # tcor=d[name]['times'][np.argmin(np.abs(d[name]['cr']-1./np.e))]
-        tcor = d[name]["corr_scale_exp_trick"]
+        tcor = d[name]["tce"]
         # Correlation scale is available in the stats file, don't need to calculate here
         ax2.axvline(tcor, linestyle="--", c="black")
         ax2.text(tcor * 1.1, 0.8, r"$t_{{corr}}$ = {0:.02f} s".format(tcor))
