@@ -92,7 +92,7 @@ def plot_sample(
     else:
         ncols = 4
 
-    fig, ax = plt.subplots(n, ncols, figsize=(12, 6))
+    fig, ax = plt.subplots(n, ncols, figsize=(ncols * 4, n * 3))
 
     # Before plotting, sort the n bad inputs by missing proportion
     other_inputs_plot = other_inputs[input_ind][:n]
@@ -213,7 +213,7 @@ def plot_sample(
                 ),
                 other_outputs_plot[i]["sosf"] + x * other_outputs_plot[i]["sosf_se"],
                 color="lightgrey",
-                alpha=0.5,
+                alpha=0.6,
                 label=f"$\pm$ {x} SE",
             )
 
