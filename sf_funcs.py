@@ -113,8 +113,8 @@ def plot_sample(
     for i in range(n):
         missing = other_outputs_plot[i]["missing_prop_overall"].values[0]
         # missing = np.isnan(ts_plot).sum() / len(ts_plot)
-        ax[i, 0].plot(good_input[input_ind], color="grey")  # Complete time series
-        ax[i, 0].plot(other_inputs_plot[i], color="black")
+        ax[i, 0].plot(good_input[input_ind], color="grey", lw=0.8)
+        ax[i, 0].plot(other_inputs_plot[i], color="black", lw=0.8)
 
         # Add the missing % as an annotation in the top left
         ax[i, 0].annotate(
@@ -192,6 +192,7 @@ def plot_sample(
                 color="black",
                 linewidth=3,
             )
+            suffix = ""  # for the title
             if len(good_input[input_ind]) < 5000:
                 ax[i, j].scatter(
                     other_lag_vals["lag"],
@@ -202,10 +203,10 @@ def plot_sample(
                 )
                 suffix = " + squared diffs"
 
-            # Plot "confidence region"
+            # Plot "confidence region" of +- x SEs
             x = 8
             ax[i, j].fill_between(
-                other_outputs_plot[i].index,
+                other_outputs_plot[i]["lag"],
                 np.maximum(
                     other_outputs_plot[i]["sosf"]
                     - x * other_outputs_plot[i]["sosf_se"],
@@ -250,7 +251,6 @@ def plot_sample(
         bbox=dict(facecolor="white", edgecolor="grey", boxstyle="round", alpha=0.5),
     )
 
-    suffix = ""
     if linear is True:
         ax[0, 1].set_title("SF$_2$" + suffix)
 
@@ -258,7 +258,7 @@ def plot_sample(
 
 
 def plot_error_trend_line(other_outputs_df):
-    plt.title("SF estimation error vs. lag and sparsity")
+    plt.title("SF estimation error vs. lag and global sparsity")
     # plt.plot(lag_error_mean_i, color="black", lw=3)
     plt.scatter(
         other_outputs_df["lag"],
@@ -266,7 +266,7 @@ def plot_error_trend_line(other_outputs_df):
         c=other_outputs_df["missing_prop_overall"],
         s=0.5,
         alpha=0.5,
-        cmap="cool",
+        cmap="viridis",
     )
 
     plt.annotate(
@@ -279,7 +279,7 @@ def plot_error_trend_line(other_outputs_df):
     )
 
     cb = plt.colorbar()
-    cb.set_label("% missing")
+    cb.set_label("% missing overall")
     # Change range of color bar
     plt.hlines(0, 1, 1000, color="black", linestyle="--")
     plt.clim(0, 1)
@@ -323,12 +323,12 @@ def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
     plt.show()
 
 
-def plot_heatmap(inputs, missing_measure):
+def plot_heatmap(inputs, missing_measure, num_bins=25):
+    """Plot a heatmap of the mean error for each bin of lag and missing measure.
+    num_bins: The number of bins to use in each direction (x and y)
+    """
     x = inputs["lag"]
     y = inputs[missing_measure]
-
-    # Define the number of bins in x and y directions
-    num_bins = 25
 
     heatmap, xedges, yedges = np.histogram2d(x, y, bins=num_bins)
     data = {"Lag": [], missing_measure: [], "MPE": []}
