@@ -92,7 +92,7 @@ def plot_sample(
     else:
         ncols = 4
 
-    fig, ax = plt.subplots(n, ncols, figsize=(ncols * 4, n * 3))
+    fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 3))
 
     # Before plotting, sort the n bad inputs by missing proportion
     other_inputs_plot = other_inputs[input_ind][:n]
@@ -323,7 +323,9 @@ def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
     plt.show()
 
 
-def plot_heatmap(inputs, missing_measure, num_bins=25):
+def plot_heatmap(
+    inputs, missing_measure, num_bins=25, log=False, overlay_x=None, overlay_y=None
+):
     """Plot a heatmap of the mean error for each bin of lag and missing measure.
     num_bins: The number of bins to use in each direction (x and y)
     """
@@ -366,7 +368,10 @@ def plot_heatmap(inputs, missing_measure, num_bins=25):
     plt.xlabel("Lag")
     plt.ylabel(missing_measure)
     plt.title("SF estimation error using LINT")
-    # plt.xscale("log")
+    if overlay_x is not None:
+        plt.plot(overlay_x, overlay_y)
+    if log is True:
+        plt.xscale("log")
     plt.show()
 
     return pd.DataFrame(data)
