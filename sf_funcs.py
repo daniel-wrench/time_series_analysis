@@ -118,7 +118,7 @@ def plot_sample(
 
         # Add the missing % as an annotation in the top left
         ax[i, 0].annotate(
-            f"{missing*100:.2f}% missing",
+            f"{missing*100:.2f}\% missing",
             xy=(1, 1),
             xycoords="axes fraction",
             xytext=(0.05, 0.85),
@@ -243,7 +243,7 @@ def plot_sample(
     ax[0, 1].legend(loc="lower right", frameon=True)
 
     ax[0, ncols - 1].annotate(
-        "\% diffs missing",
+        "\% pairs missing",
         xy=(1, 1),
         xycoords="axes fraction",
         xytext=(0.05, 0.85),
@@ -445,5 +445,7 @@ def compute_scaling(bad_output, var, heatmap_vals):
 
         bad_output.loc[i, "scaling"] = scaling
         bad_output.loc[bad_output["error"] == 0, "scaling"] = 1  # Catching 0 errors
+
+    bad_output["sosf_corrected"] = bad_output["sosf"] * bad_output["scaling"]
 
     return bad_output
