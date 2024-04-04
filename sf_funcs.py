@@ -330,14 +330,17 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25):
     Args:
         num_bins: The number of bins to use in each direction (x and y)
     """
+
     x = inputs["lag"]
     y = inputs[missing_measure]
 
-    heatmap, xedges, yedges = np.histogram2d(x, y, bins=num_bins)
+    heatmap, xedges, yedges = np.histogram2d(
+        x, y, bins=num_bins, range=[[0, 1000], [0, 1]]
+    )
     data = {"Lag": [], missing_measure: [], "MPE": []}
     # Calculate the mean value in each bin
-    xidx = np.digitize(x, xedges)
-    yidx = np.digitize(y, yedges)
+    xidx = np.digitize(x, xedges) - 1  # correcting for annoying 1-indexing
+    yidx = np.digitize(y, yedges) - 1  # as above
     means = np.full((num_bins, num_bins), fill_value=np.nan)
     for i in range(num_bins):
         for j in range(num_bins):
