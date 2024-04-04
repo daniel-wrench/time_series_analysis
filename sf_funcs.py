@@ -144,7 +144,7 @@ def plot_sample(
         ax[i, ncols - 1].plot(
             other_outputs_plot[i]["missing_prop"] * 100,
             color=colour,
-            label="% pairs missing",
+            label="\% pairs missing",
         )
         ax[i, ncols - 1].semilogx()
         ax[i, ncols - 1].set_ylim(0, 100)
@@ -155,13 +155,15 @@ def plot_sample(
         ax2 = ax[i, ncols - 1].twinx()
         # ax2.plot(sfn_pm["N"], color=colour, label="\# points")
 
-        ax2.plot(other_outputs_plot[i]["error_percent"], color="black", label="% error")
+        ax2.plot(
+            other_outputs_plot[i]["error_percent"], color="black", label="\% error"
+        )
         ax2.semilogx()
         ax2.set_ylim(-100, 100)
         ax2.axhline(0, color="black", linestyle="--")
         if i == 0:
             ax2.annotate(
-                "% error",
+                "\% error",
                 xy=(1, 1),
                 xycoords="axes fraction",
                 xytext=(0.75, 0.85),
@@ -241,7 +243,7 @@ def plot_sample(
     ax[0, 1].legend(loc="lower right", frameon=True)
 
     ax[0, ncols - 1].annotate(
-        "% diffs missing",
+        "\% diffs missing",
         xy=(1, 1),
         xycoords="axes fraction",
         xytext=(0.05, 0.85),
@@ -279,14 +281,14 @@ def plot_error_trend_line(other_outputs_df):
     )
 
     cb = plt.colorbar()
-    cb.set_label("% missing overall")
+    cb.set_label("\% missing overall")
     # Change range of color bar
     plt.hlines(0, 1, 1000, color="black", linestyle="--")
     plt.clim(0, 1)
     # plt.ylim(-200, 200)
     plt.semilogx()
     plt.xlabel("Lag ($\\tau$)")
-    plt.ylabel("% error")
+    plt.ylabel("\% error")
     plt.show()
 
 
@@ -318,16 +320,15 @@ def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
     plt.xlabel("Fraction of data missing overall")
     plt.ylabel("MAPE")
     plt.ylim(0, 100)
-    plt.title("Overall % error vs. sparsity (chunks)")
+    plt.title("Overall \% error vs. sparsity (chunks)")
     plt.legend()
     plt.show()
 
 
-def plot_heatmap(
-    inputs, missing_measure, num_bins=25, log=False, overlay_x=None, overlay_y=None
-):
-    """Plot a heatmap of the mean error for each bin of lag and missing measure.
-    num_bins: The number of bins to use in each direction (x and y)
+def create_heatmap_lookup(inputs, missing_measure, num_bins=25):
+    """Extract the mean error for each bin of lag and missing measure.
+    Args:
+        num_bins: The number of bins to use in each direction (x and y)
     """
     x = inputs["lag"]
     y = inputs[missing_measure]
@@ -351,30 +352,56 @@ def plot_heatmap(
                 data[missing_measure].append(yedges[j])
                 data["MPE"].append(lag_prop_mean)
 
-    # Create heatmap-style scatter plot
-    plt.figure(figsize=(8, 6))
-    plt.imshow(
+    return means, [xedges, yedges], pd.DataFrame(data)
+
+
+def plot_heatmap(
+    means,
+    edges,
+    missing_measure,
+    log,
+    overlay_x=None,
+    overlay_y=None,
+    subplot=None,
+):
+    """Plot the heatmap of the MPE values for each bin of lag and missing measure."""
+    xedges = edges[0]
+    yedges = edges[1]
+
+    if subplot is not None:
+        ax = subplot
+    else:
+        fig, ax = plt.subplots(figsize=(7, 5))
+
+    im = ax.imshow(
         means.T,
         origin="lower",
-        cmap="seismic",
+        cmap="bwr",
         interpolation="nearest",
         extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],
         aspect="auto",
     )
-    plt.colorbar(label="MPE", orientation="vertical")
-    # Change range of colorbar
-    plt.clim(-100, 100)
-    plt.ylim(0, 1)
-    plt.xlabel("Lag")
-    plt.ylabel(missing_measure)
-    plt.title("SF estimation error using LINT")
-    if overlay_x is not None:
-        plt.plot(overlay_x, overlay_y)
-    if log is True:
-        plt.xscale("log")
-    plt.show()
 
-    return pd.DataFrame(data)
+    if subplot is None:
+        cbar = fig.colorbar(im, ax=ax, label="MPE", orientation="vertical")
+    # Change range of colorbar
+    im.set_clim(-100, 100)
+
+    if log is True:
+        ax.semilogx()
+
+    ax.set_facecolor("black")  # So we can distinguish 0 means from missing means
+    ax.set_ylabel(missing_measure)
+
+    if subplot is None:
+        ax.set_xlabel("Lag")
+        ax.set_title("SF estimation error using LINT")
+        plt.show()
+    else:
+        ax.set_title("Correction factor extraction")
+        if overlay_x is not None:
+            ax.plot(overlay_x, overlay_y)
+        return ax
 
 
 def compute_scaling(bad_output, var, heatmap_vals):
