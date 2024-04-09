@@ -5,6 +5,5 @@ numpy==1.22.3
 cdflib==0.4.7
 statsmodels==0.13.2
 matplotlib==3.5.1
-scipy==1.8.0
 astropy==5.1
 mpi4py==3.1.3

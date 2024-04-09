@@ -1,2 +1,5 @@
 TurbAn/*
 data/raw/*
+*.out
+*.err
+venv/

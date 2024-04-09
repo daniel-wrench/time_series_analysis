@@ -1,11 +1,11 @@
-import scipy.signal as signal
+#import scipy.signal as signal
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import cdflib
 import statsmodels.api as sm
 from pprint import pprint
-from scipy.optimize import curve_fit
+#from scipy.optimize import curve_fit
 import random
 
 plt.rcParams.update({"font.size": 9})
