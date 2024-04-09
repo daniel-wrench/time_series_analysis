@@ -84,7 +84,7 @@ def plot_sample(
     other_outputs,
     colour,
     input_ind=0,
-    n=3,
+    input_versions=3,  # Either number of versions to plot or a list of versions to plot
     linear=True,
 ):
     if linear is False:
@@ -92,11 +92,18 @@ def plot_sample(
     else:
         ncols = 4
 
-    fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 3))
-
-    # Before plotting, sort the n bad inputs by missing proportion
-    other_inputs_plot = other_inputs[input_ind][:n]
-    other_outputs_plot = other_outputs[input_ind][:n]
+    # Check if n is an integer
+    if not isinstance(input_versions, int):
+        n = len(input_versions)
+        fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 3))
+        other_inputs_plot = [other_inputs[input_ind][i] for i in input_versions]
+        other_outputs_plot = [other_outputs[input_ind][i] for i in input_versions]
+    else:
+        n = input_versions
+        fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 3))
+        # Before plotting, sort the n bad inputs by missing proportion
+        other_inputs_plot = other_inputs[input_ind][:n]
+        other_outputs_plot = other_outputs[input_ind][:n]
 
     sparsities = [df["missing_prop_overall"].values[0] for df in other_outputs_plot]
 
@@ -195,11 +202,11 @@ def plot_sample(
                 linewidth=3,
             )
             suffix = ""  # for the title
-            if len(good_input[input_ind]) < 5000:
+            if len(good_input[input_ind]) < 3000:
                 ax[i, j].scatter(
                     other_lag_vals["lag"],
                     other_lag_vals["sq_diffs"],
-                    alpha=0.01,
+                    alpha=0.005,
                     s=1,
                     c=colour,
                 )
@@ -358,6 +365,45 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25):
     return means, [xedges, yedges], pd.DataFrame(data)
 
 
+def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25):
+    """Extract the mean error for each bin of lag and missing measure.
+    Args:
+        num_bins: The number of bins to use in each direction (x and y)
+    """
+
+    x = inputs["lag"]
+    y = inputs[missing_measure]
+    z = inputs["sosf"]
+
+    xedges = np.linspace(0, inputs.lag.max() + 1, num_bins + 1)  # Lags
+    yedges = np.linspace(0, 1, num_bins + 1)  # Missing prop
+    zedges = np.linspace(inputs.sosf.min(), inputs.sosf.max(), num_bins + 1)  # Power
+
+    data = {"Lag": [], missing_measure: [], "sosf": [], "MPE": []}
+    # Calculate the mean value in each bin
+    xidx = np.digitize(x, xedges) - 1  # correcting for annoying 1-indexing
+    yidx = np.digitize(y, yedges) - 1  # as above
+    zidx = np.digitize(z, zedges) - 1  # as above
+
+    means = np.full((num_bins, num_bins, num_bins), fill_value=np.nan)
+    for i in range(num_bins):
+        for j in range(num_bins):
+            for k in range(num_bins):
+                # If there are any values, calculate the mean for that bin
+                if len(x[(xidx == i) & (yidx == j) & (zidx == k)]) > 0:
+                    # means[i, j] = np.mean(y[(xidx == i) & (yidx == j)])
+                    lag_prop_mean = np.mean(
+                        inputs["error_percent"][(xidx == i) & (yidx == j) & (zidx == k)]
+                    )
+                    means[i, j, k] = lag_prop_mean
+                    data["Lag"].append(xedges[i])
+                    data[missing_measure].append(yedges[j])
+                    data["sosf"].append(zedges[k])
+                    data["MPE"].append(lag_prop_mean)
+
+    return means, [xedges, yedges, zedges], pd.DataFrame(data)
+
+
 def plot_heatmap(
     means,
     edges,
@@ -366,6 +412,7 @@ def plot_heatmap(
     overlay_x=None,
     overlay_y=None,
     subplot=None,
+    title="Correction factor extraction",
 ):
     """Plot the heatmap of the MPE values for each bin of lag and missing measure."""
     xedges = edges[0]
@@ -401,7 +448,7 @@ def plot_heatmap(
         ax.set_title("SF estimation error using LINT")
         plt.show()
     else:
-        ax.set_title("Correction factor extraction")
+        ax.set_title(title)
         if overlay_x is not None:
             ax.plot(overlay_x, overlay_y)
         return ax
@@ -422,6 +469,53 @@ def compute_scaling(bad_output, var, heatmap_vals):
         nearest_row = df.loc[
             (df["lag_diff"] == np.min(df["lag_diff"]))
             & (df["prop_diff"] == np.min(df["prop_diff"]))
+        ]
+
+        # print("Desired lag: {}".format(desired_lag))
+        # print("Desired prop: {}".format(desired_prop))
+        # print("Nearest row:")
+        # print(nearest_row)
+
+        if len(nearest_row) > 1:
+            print("More than one nearest row found!")
+            result = nearest_row.head(1)
+            MPE = result["MPE"].values[0]
+            scaling = 1 / (1 + MPE / 100)
+
+        elif len(nearest_row) == 0:
+            print("No nearest row found for lag {}! Scaling set to 1".format(i))
+            scaling = 1
+        else:
+            result = nearest_row.head(1)
+            MPE = result["MPE"].values[0]
+            scaling = 1 / (1 + MPE / 100)
+
+        bad_output.loc[i, "scaling"] = scaling
+        bad_output.loc[bad_output["error"] == 0, "scaling"] = 1  # Catching 0 errors
+
+    bad_output["sosf_corrected"] = bad_output["sosf"] * bad_output["scaling"]
+
+    return bad_output
+
+
+def compute_scaling_3d(bad_output, var, heatmap_vals):
+    """
+    Extracting values from each bin to create a look-up table. Note that due to binning we have to find the nearest value to get the corresponding MAPE for a given lag and proportion of pairs remaining. Using MPE as we want to maintaing the direction of the error for compensating."""
+    df = heatmap_vals
+    for i, row in bad_output.iterrows():
+        desired_prop = row[var]
+        desired_lag = i
+        desired_sosf = row["sosf"]
+        # Calculate absolute differences between desired Lag and all Lag values in the DataFrame
+        df["lag_diff"] = np.abs(df["Lag"] - desired_lag)
+        df["prop_diff"] = np.abs(df[var] - desired_prop)
+        df["sosf_diff"] = np.abs(df["sosf"] - desired_sosf)
+
+        # Find the row with the minimum absolute difference
+        nearest_row = df.loc[
+            (df["lag_diff"] == np.min(df["lag_diff"]))
+            & (df["prop_diff"] == np.min(df["prop_diff"]))
+            & (df["sosf_diff"] == np.min(df["sosf_diff"]))
         ]
 
         # print("Desired lag: {}".format(desired_lag))
