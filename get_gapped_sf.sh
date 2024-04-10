@@ -1,8 +1,9 @@
 #!/bin/bash -e
 
 #SBATCH --job-name          get_gapped_sf
-#SBATCH --partition         quicktest
-#SBATCH --nodelist          amd01n01
+#SBATCH --partition         parallel
+#SBATCH --reservation	    SpjReservation
+#SBATCH --nodelist          spj01
 #SBATCH --mem               10G
 #SBATCH --cpus-per-task     12
 #SBATCH --time              00:10:00
