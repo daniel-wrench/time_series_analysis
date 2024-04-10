@@ -53,13 +53,13 @@ raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))
 file_list_split = np.array_split(raw_file_list, size)
 
 # Broadcast the list of files to all cores
-file_list = comm.bcast(raw_file_list, root=0)
+file_list_split = comm.bcast(file_list_split, root=0)
 
 # For each core, load in the data from the files assigned to that core
 print("\nREADING RAW CDF FILES")
 print("Core ", rank)
 psp_data = dif.read_cdfs(
-    file_list,
+    file_list_split[rank],
     {"epoch_mag_RTN": (0), "psp_fld_l2_mag_RTN": (0, 3), "label_RTN": (0, 3)},
 )
 psp_data_ready = dif.extract_components(
