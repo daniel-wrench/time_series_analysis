@@ -56,7 +56,6 @@ file_list_split = np.array_split(raw_file_list, size)
 file_list_split = comm.bcast(file_list_split, root=0)
 
 # For each core, load in the data from the files assigned to that core
-print("\nREADING RAW CDF FILES")
 print("Core ", rank)
 psp_data = dif.read_cdfs(
     file_list_split[rank],
@@ -74,7 +73,6 @@ psp_df["Time"] = pd.to_datetime("2000-01-01 12:00") + pd.to_timedelta(
     psp_df["epoch_mag_RTN"], unit="ns"
 )
 psp_df = psp_df.drop(columns="epoch_mag_RTN").set_index("Time")
-print("\n", psp_df.head())
 
 df_raw = psp_df["B_R"]
 
@@ -82,26 +80,26 @@ df_raw = psp_df["B_R"]
 
 ### 0PTIONAL CODE ###
 
-if df_raw.isnull().sum() == 0:
-    print("No missing data")
-else:
-    print(f"{df_raw.isnull().sum()} missing points")
-print("Length of interval: " + str(df_raw.notnull().sum()))
-print("Duration of interval: " + str(df_raw.index[-1] - df_raw.index[0]))
-x = df_raw.values
+# if df_raw.isnull().sum() == 0:
+#     print("No missing data")
+# else:
+#     print(f"{df_raw.isnull().sum()} missing points")
+# print("Length of interval: " + str(df_raw.notnull().sum()))
+# print("Duration of interval: " + str(df_raw.index[-1] - df_raw.index[0]))
+# x = df_raw.values
 
-# Frequency of measurements
-print("Duration between some adjacent data points:")
-print(df_raw.index[2] - df_raw.index[1])
-print(df_raw.index[3] - df_raw.index[2])
-print(df_raw.index[4] - df_raw.index[3])
+# # Frequency of measurements
+# print("Duration between some adjacent data points:")
+# print(df_raw.index[2] - df_raw.index[1])
+# print(df_raw.index[3] - df_raw.index[2])
+# print(df_raw.index[4] - df_raw.index[3])
 
-a = df_raw.index[2] - df_raw.index[1]
-x_freq = 1 / (a.microseconds / 1e6)
-print("\nFrequency is {0:.2f} Hz (2dp)".format(x_freq))
+# a = df_raw.index[2] - df_raw.index[1]
+# x_freq = 1 / (a.microseconds / 1e6)
+# print("\nFrequency is {0:.2f} Hz (2dp)".format(x_freq))
 
-print("Mean = {}".format(np.mean(x)))
-print("Standard deviation = {}\n".format(np.std(x)))
+# print("Mean = {}".format(np.mean(x)))
+# print("Standard deviation = {}\n".format(np.std(x)))
 
 ### 0PTIONAL CODE END ###
 
@@ -154,7 +152,7 @@ for interval_approx in interval_list_approx:
         )
 
     interval_approx_resampled = interval_approx.resample(
-        str(new_cadence) + "S"
+        str(np.round(new_cadence, 3)) + "S"
     ).mean()  # Resample to higher frequency
 
     for i in range(
@@ -181,7 +179,7 @@ all_interp_inputs_list = []
 all_interp_outputs_list = []
 
 for i, input in enumerate(good_inputs_list):
-    print("\nPROCESSING CLEAN INTERVAL {}".format(i))
+    print(f"\nCore {rank} processing standardised interval {i}")
     good_output = sf.compute_sf(pd.DataFrame(input), lags, powers)
     good_outputs_list.append(good_output)
 
@@ -194,8 +192,8 @@ for i, input in enumerate(good_inputs_list):
         # Remove data (up to about 90%, may be some numerical issues with large %)
         # in both chunks and uniformly - split given by ratio_removal
         ratio_removal = np.random.uniform()
-        print("Nominal total removal: {0:.1f}%".format(total_removal * 100))
-        print("Nominal ratio: {0:.1f}%".format(ratio_removal * 100))
+        # print("Nominal total removal: {0:.1f}%".format(total_removal * 100))
+        # print("Nominal ratio: {0:.1f}%".format(ratio_removal * 100))
         prop_remove_chunks = total_removal * ratio_removal
         prop_remove_unif = total_removal * (1 - ratio_removal)
         bad_input_temp, bad_input_ind, prop_removed = ts.remove_data(
