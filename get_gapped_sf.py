@@ -49,14 +49,15 @@ except ImportError:
 
 # Get list of files in psp directory and split between cores
 # (if running in parallel)
-raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))[:2]
+raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))
 file_list_split = np.array_split(raw_file_list, size)
 
 # Broadcast the list of files to all cores
 file_list = comm.bcast(raw_file_list, root=0)
 
 # For each core, load in the data from the files assigned to that core
-print("Rank", rank, "loading", file_list[rank])
+print("\nREADING RAW CDF FILES")
+print("Core ", rank)
 psp_data = dif.read_cdfs(
     file_list,
     {"epoch_mag_RTN": (0), "psp_fld_l2_mag_RTN": (0, 3), "label_RTN": (0, 3)},
@@ -73,7 +74,7 @@ psp_df["Time"] = pd.to_datetime("2000-01-01 12:00") + pd.to_timedelta(
     psp_df["epoch_mag_RTN"], unit="ns"
 )
 psp_df = psp_df.drop(columns="epoch_mag_RTN").set_index("Time")
-print("Preview:\n", psp_df.head())
+print("\n", psp_df.head())
 
 df_raw = psp_df["B_R"]
 
@@ -100,7 +101,7 @@ x_freq = 1 / (a.microseconds / 1e6)
 print("\nFrequency is {0:.2f} Hz (2dp)".format(x_freq))
 
 print("Mean = {}".format(np.mean(x)))
-print("Standard deviation = {}".format(np.std(x)))
+print("Standard deviation = {}\n".format(np.std(x)))
 
 ### 0PTIONAL CODE END ###
 
@@ -180,7 +181,7 @@ all_interp_inputs_list = []
 all_interp_outputs_list = []
 
 for i, input in enumerate(good_inputs_list):
-    print("\nProcessing input {}".format(i))
+    print("\nPROCESSING CLEAN INTERVAL {}".format(i))
     good_output = sf.compute_sf(pd.DataFrame(input), lags, powers)
     good_outputs_list.append(good_output)
 
@@ -251,5 +252,5 @@ list_of_list_of_dfs = [
     all_interp_outputs_list,
 ]
 
-with open("data/processed/list_of_list_of_dfs.pkl", "wb") as f:
+with open(f"data/processed/sfs_psp_core_{rank}.pkl", "wb") as f:
     pickle.dump(list_of_list_of_dfs, f)
