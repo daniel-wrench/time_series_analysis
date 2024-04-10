@@ -11,6 +11,7 @@ import numpy as np
 import ts_dashboard_utils as ts
 import utils as utils  # copied directly from Reynolds project, normalize() added
 import sf_funcs as sf
+import data_import_funcs as dif
 
 # Setting up parallel processing (or not, if running locally)
 try:
@@ -48,17 +49,33 @@ except ImportError:
 
 # Get list of files in psp directory and split between cores
 # (if running in parallel)
-file_list = sorted(glob.iglob("data/processed/psp/" + "/*.pkl"))
-file_list_split = np.array_split(file_list, size)
+raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))[:2]
+file_list_split = np.array_split(raw_file_list, size)
 
 # Broadcast the list of files to all cores
-file_list = comm.bcast(file_list, root=0)
+file_list = comm.bcast(raw_file_list, root=0)
 
 # For each core, load in the data from the files assigned to that core
 print("Rank", rank, "loading", file_list[rank])
-df_raw_full = pd.read_pickle(file_list[rank])
-df_raw = df_raw_full["B_R"]
-print("Preview:\n", df_raw.head())
+psp_data = dif.read_cdfs(
+    file_list,
+    {"epoch_mag_RTN": (0), "psp_fld_l2_mag_RTN": (0, 3), "label_RTN": (0, 3)},
+)
+psp_data_ready = dif.extract_components(
+    psp_data,
+    var_name="psp_fld_l2_mag_RTN",
+    label_name="label_RTN",
+    time_var="epoch_mag_RTN",
+    dim=3,
+)
+psp_df = pd.DataFrame(psp_data_ready)
+psp_df["Time"] = pd.to_datetime("2000-01-01 12:00") + pd.to_timedelta(
+    psp_df["epoch_mag_RTN"], unit="ns"
+)
+psp_df = psp_df.drop(columns="epoch_mag_RTN").set_index("Time")
+print("Preview:\n", psp_df.head())
+
+df_raw = psp_df["B_R"]
 
 # Optionally, check the data for missing data and its frequency, get summary stats
 

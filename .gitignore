@@ -1,2 +1,6 @@
 TurbAn/*
-data/raw/*
+data/*
+src/__pycache__/*
+*.out
+*.err
+venv/
