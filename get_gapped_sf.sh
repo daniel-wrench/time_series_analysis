@@ -2,8 +2,9 @@
 
 #SBATCH --job-name          get_gapped_sf
 #SBATCH --partition         quicktest
+#SBATCH --nodelist          amd01n01
 #SBATCH --mem               10G
-#SBATCH --cpus-per-task     1
+#SBATCH --cpus-per-task     12
 #SBATCH --time              00:10:00
 #SBATCH --output            %x.out
 #SBATCH --error             %x.err
@@ -19,6 +20,6 @@ source venv/bin/activate
 echo "JOB STARTED"
 date
 
-mpirun --oversubscribe -n 1 python get_gapped_sf.py
+mpirun --oversubscribe -n 12 python get_gapped_sf.py
 
 echo "FINISHED"
