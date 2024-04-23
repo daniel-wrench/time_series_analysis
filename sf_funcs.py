@@ -4,8 +4,11 @@ import pandas as pd
 
 plt.rcParams.update({"font.size": 10})
 
+# Set seed for reproducibility
+np.random.seed(42)
 
-def compute_sf(data, lags, powers=[2]):
+
+def compute_sf(data, lags, powers=[2], retain_increments=False):
     """
     Routine to compute the increments of a time series and then the mean (structure function) and standard deviation
     of the PDF of these increments, raised to the specified powers.
@@ -24,6 +27,7 @@ def compute_sf(data, lags, powers=[2]):
         for i in powers:
             array = []
             mean_array = []
+            mapd_array = []
             std_array = []
             N_array = []
             for lag in lags:
@@ -33,7 +37,9 @@ def compute_sf(data, lags, powers=[2]):
                 array += [strct.values]
 
                 strct_mean = strct.mean()
+                median_abs_diff = np.nanmedian(np.abs(dax))
                 mean_array += [strct_mean]
+                mapd_array += [median_abs_diff]
                 strct_std = strct.std()
                 std_array += [strct_std]
 
@@ -43,18 +49,19 @@ def compute_sf(data, lags, powers=[2]):
             if i == 2:
                 df["lag"] = lags
                 df["n"] = N_array
-                df["sq_diffs"] = array
                 df["sosf"] = mean_array
+                df["mapd"] = mapd_array
                 df["sosf_se"] = np.array(std_array) / np.sqrt(N_array)
-                # Add the Cressie-Hawkins estimator
-                # df["sosf_ch"] =
+                if retain_increments is True:
+                    df["sq_diffs"] = array
 
             else:
                 df["n"] = N_array
-                df[str(i)] = array
                 df[str(i) + "_mean"] = mean_array
                 df[str(i) + "_std"] = std_array
                 df[str(i) + "_std_err"] = np.array(std_array) / np.sqrt(N_array)
+                if retain_increments is True:
+                    df[str(i) + "_diffs"] = array
 
     else:
         raise ValueError(
@@ -182,9 +189,6 @@ def plot_sample(
                 ),
             )
 
-        # Get lag vals
-        other_lag_vals = get_lag_vals_list(other_outputs_plot[i])
-
         # Plot scatter plot and line plot for both log-scale and linear-scale
         for j in range(ncols - 2):
             j += 1
@@ -202,7 +206,12 @@ def plot_sample(
                 linewidth=3,
             )
             suffix = ""  # for the title
-            if len(good_input[input_ind]) < 3000:
+            # Get lag vals
+            if (
+                "sq_diffs" in other_outputs_plot[i].columns
+                and len(good_input[input_ind]) < 3000
+            ):
+                other_lag_vals = get_lag_vals_list(other_outputs_plot[i])
                 ax[i, j].scatter(
                     other_lag_vals["lag"],
                     other_lag_vals["sq_diffs"],
@@ -495,10 +504,21 @@ def compute_scaling(bad_output, var, heatmap_vals):
 
     bad_output["sosf_corrected"] = bad_output["sosf"] * bad_output["scaling"]
 
+    # Smoothing potentially jumpy correction
+    bad_output["scaling_smoothed"] = (
+        bad_output["scaling"].rolling(window=20, min_periods=1).mean()
+    )
+    bad_output["sosf_corrected_smoothed"] = (
+        bad_output["sosf"] * bad_output["scaling_smoothed"]
+    )
+
     return bad_output
 
 
-def compute_scaling_3d(bad_output, var, heatmap_vals):
+from scipy import interpolate
+
+
+def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear"):
     """
     Extracting values from each bin to create a look-up table. Note that due to binning we have to find the nearest value to get the corresponding MAPE for a given lag and proportion of pairs remaining. Using MPE as we want to maintaing the direction of the error for compensating."""
     df = heatmap_vals
@@ -541,5 +561,12 @@ def compute_scaling_3d(bad_output, var, heatmap_vals):
         bad_output.loc[bad_output["error"] == 0, "scaling"] = 1  # Catching 0 errors
 
     bad_output["sosf_corrected"] = bad_output["sosf"] * bad_output["scaling"]
+    # Smoothing potentially jumpy correction
+    bad_output["scaling_smoothed"] = (
+        bad_output["scaling"].rolling(window=20, min_periods=1).mean()
+    )
+    bad_output["sosf_corrected_smoothed"] = (
+        bad_output["sosf"] * bad_output["scaling_smoothed"]
+    )
 
     return bad_output
