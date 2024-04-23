@@ -6,11 +6,13 @@
 
 import glob
 import pickle
+from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 import ts_dashboard_utils as ts
 import utils as utils  # copied directly from Reynolds project, normalize() added
 import sf_funcs as sf
+import sys
 import data_import_funcs as dif
 
 # Setting up parallel processing (or not, if running locally)
@@ -49,7 +51,7 @@ except ImportError:
 
 # Get list of files in psp directory and split between cores
 # (if running in parallel)
-raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))
+raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))[:2]
 file_list_split = np.array_split(raw_file_list, size)
 
 # Broadcast the list of files to all cores
@@ -113,7 +115,7 @@ tce_approx_n = 15
 cadence_approx = 0.1  # s
 
 tce_n = 8  # Number of correlation times we want...
-interval_length = 4000  # ...across this many points
+interval_length = 1000  # ...across this many points
 good_inputs_list = []
 
 df = df_raw.resample(str(cadence_approx) + "S").mean()
@@ -168,9 +170,12 @@ print(
     + "\n(may be more than one per original chunk for small cadences)"
 )
 
+# Logarithmically-spaced lags?
+# vals = np.logspace(0, 3, 0.25 * len(good_inputs_list[0]))
+# lags = np.unique(vals.astype(int))
 lags = np.arange(1, 0.25 * len(good_inputs_list[0]))
 powers = [2]
-times_to_gap = 2
+times_to_gap = 4
 
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -192,8 +197,8 @@ for i, input in enumerate(good_inputs_list):
         # Remove data (up to about 90%, may be some numerical issues with large %)
         # in both chunks and uniformly - split given by ratio_removal
         ratio_removal = np.random.uniform()
-        # print("Nominal total removal: {0:.1f}%".format(total_removal * 100))
-        # print("Nominal ratio: {0:.1f}%".format(ratio_removal * 100))
+        print("Nominal total removal: {0:.1f}%".format(total_removal * 100))
+        print("Nominal ratio: {0:.1f}%".format(ratio_removal * 100))
         prop_remove_chunks = total_removal * ratio_removal
         prop_remove_unif = total_removal * (1 - ratio_removal)
         bad_input_temp, bad_input_ind, prop_removed = ts.remove_data(
@@ -209,11 +214,11 @@ for i, input in enumerate(good_inputs_list):
             )
         )
 
-        bad_inputs_list.append(bad_input)
+        bad_inputs_list.append(bad_input.values)
 
         # Linearly interpolate the missing data
         interp_input = bad_input.interpolate(method="linear")
-        interp_inputs_list.append(interp_input)
+        interp_inputs_list.append(interp_input.values)
 
         bad_output = sf.compute_sf(pd.DataFrame(bad_input), lags, powers)
         bad_output["error"] = bad_output["sosf"] - good_output["sosf"]
@@ -240,6 +245,9 @@ for i, input in enumerate(good_inputs_list):
     all_interp_inputs_list.append(interp_inputs_list)
     all_interp_outputs_list.append(interp_outputs_list)
 
+# converting from pd.Series to list of np.arrays to save space
+all_good_inputs_list = [interval.values for interval in good_inputs_list]
+
 # Export each list of outputs to a pickle file
 list_of_list_of_dfs = [
     good_inputs_list,
@@ -252,3 +260,52 @@ list_of_list_of_dfs = [
 
 with open(f"data/processed/sfs_psp_core_{rank}.pkl", "wb") as f:
     pickle.dump(list_of_list_of_dfs, f)
+
+# Now, merge the outputs from each core into a single list
+if rank == 0:
+    for i in range(1, size):
+        with open(f"data/processed/sfs_psp_core_{i}.pkl", "rb") as f:
+            list_of_list_of_dfs = pickle.load(f)
+
+        good_inputs_list += list_of_list_of_dfs[0]
+        good_outputs_list += list_of_list_of_dfs[1]
+        all_bad_inputs_list += list_of_list_of_dfs[2]
+        all_bad_outputs_list += list_of_list_of_dfs[3]
+        all_interp_inputs_list += list_of_list_of_dfs[4]
+        all_interp_outputs_list += list_of_list_of_dfs[5]
+
+    with open("data/processed/sfs_psp.pkl", "wb") as f:
+        pickle.dump(
+            [
+                good_inputs_list,
+                good_outputs_list,
+                all_bad_inputs_list,
+                all_bad_outputs_list,
+                all_interp_inputs_list,
+                all_interp_outputs_list,
+            ],
+            f,
+        )
+
+# Open the pickle file of results
+# with open("data/processed/sfs_psp.pkl", "rb") as f:
+#     list_of_list_of_dfs = pickle.load(f)
+#     # Split into constituent lists
+#     good_inputs_list = list_of_list_of_dfs[0]
+#     good_outputs_list = list_of_list_of_dfs[1]
+#     all_bad_inputs_list = list_of_list_of_dfs[2]
+#     all_bad_outputs_list = list_of_list_of_dfs[3]
+#     all_interp_inputs_list = list_of_list_of_dfs[4]
+#     all_interp_outputs_list = list_of_list_of_dfs[5]
+
+# Quick check of results
+fig, ax = plt.subplots(2, 2)
+for i in range(2):
+    ax[i, 0].plot(good_inputs_list[-i])
+    ax[i, 0].plot(all_interp_inputs_list[-i][-1])
+    ax[i, 0].plot(all_bad_inputs_list[-i][-1])
+    ax[i, 1].plot(good_outputs_list[-i]["sosf"])
+    ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
+    ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
+
+plt.savefig("data/processed/check_plot.png")
