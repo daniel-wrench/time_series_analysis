@@ -175,7 +175,7 @@ print(
 # lags = np.unique(vals.astype(int))
 lags = np.arange(1, 0.25 * len(good_inputs_list[0]))
 powers = [2]
-times_to_gap = 4
+times_to_gap = sys.argv[1]
 
 good_outputs_list = []
 all_bad_inputs_list = []
