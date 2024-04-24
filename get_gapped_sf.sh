@@ -20,6 +20,6 @@ source venv/bin/activate
 echo "JOB STARTED"
 date
 
-mpirun --oversubscribe -n 12 python get_gapped_sf.py
+mpirun --oversubscribe -n 12 python get_gapped_sf.py 2
 
 echo "FINISHED"
