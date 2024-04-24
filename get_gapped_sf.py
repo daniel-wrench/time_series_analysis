@@ -175,7 +175,7 @@ print(
 # lags = np.unique(vals.astype(int))
 lags = np.arange(1, 0.25 * len(good_inputs_list[0]))
 powers = [2]
-times_to_gap = sys.argv[1]
+times_to_gap = int(sys.argv[1])
 
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -197,8 +197,8 @@ for i, input in enumerate(good_inputs_list):
         # Remove data (up to about 90%, may be some numerical issues with large %)
         # in both chunks and uniformly - split given by ratio_removal
         ratio_removal = np.random.uniform()
-        print("Nominal total removal: {0:.1f}%".format(total_removal * 100))
-        print("Nominal ratio: {0:.1f}%".format(ratio_removal * 100))
+        # print("Nominal total removal: {0:.1f}%".format(total_removal * 100))
+        # print("Nominal ratio: {0:.1f}%".format(ratio_removal * 100))
         prop_remove_chunks = total_removal * ratio_removal
         prop_remove_unif = total_removal * (1 - ratio_removal)
         bad_input_temp, bad_input_ind, prop_removed = ts.remove_data(
@@ -287,6 +287,7 @@ if rank == 0:
             f,
         )
 
+print("Core ", rank, " finished")
 # Open the pickle file of results
 # with open("data/processed/sfs_psp.pkl", "rb") as f:
 #     list_of_list_of_dfs = pickle.load(f)
@@ -301,11 +302,12 @@ if rank == 0:
 # Quick check of results
 fig, ax = plt.subplots(2, 2)
 for i in range(2):
-    ax[i, 0].plot(good_inputs_list[-i])
+    ax[i, 0].plot(good_inputs_list[-i].values)
     ax[i, 0].plot(all_interp_inputs_list[-i][-1])
     ax[i, 0].plot(all_bad_inputs_list[-i][-1])
     ax[i, 1].plot(good_outputs_list[-i]["sosf"])
     ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
     ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
 
-plt.savefig("data/processed/check_plot.png")
+plt.savefig("data/processed/validation_plot.png")
+print("Validation plot saved")
