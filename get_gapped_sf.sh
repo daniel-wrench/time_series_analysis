@@ -4,9 +4,9 @@
 #SBATCH --partition         parallel
 #SBATCH --reservation	    SpjReservation
 #SBATCH --nodelist          spj01
-#SBATCH --mem               10G
+#SBATCH --mem               50G
 #SBATCH --cpus-per-task     12
-#SBATCH --time              00:10:00
+#SBATCH --time              00:30:00
 #SBATCH --output            %x.out
 #SBATCH --error             %x.err
 ##SBATCH --mail-type         ALL
