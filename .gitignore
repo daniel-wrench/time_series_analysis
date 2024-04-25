@@ -5,3 +5,4 @@ __pycache__/*
 *.err
 venv/
 __pycache__/*
+*.pyc
