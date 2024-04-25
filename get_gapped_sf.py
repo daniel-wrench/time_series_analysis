@@ -161,6 +161,12 @@ for interval_approx in interval_list_approx:
         0, len(interval_approx_resampled) - interval_length + 1, interval_length
     ):
         interval = interval_approx_resampled.iloc[i : i + interval_length]
+        # CHeck if interval is all NaNs
+        if interval.isnull().sum() == len(interval):
+            print("All NaNs in interval, skipping (may be due to resampling")
+            # Note the input filename
+            print("Corresponding input file list: ", file_list_split[rank])
+            continue
         int_norm = utils.normalize(interval)
         good_inputs_list.append(int_norm)
 
@@ -263,19 +269,11 @@ with open(f"data/processed/sfs_psp_core_{rank}.pkl", "wb") as f:
 
 print("Core ", rank, " finished")
 
-# Open the pickle file of results
-# with open("data/processed/sfs_psp.pkl", "rb") as f:
-#     list_of_list_of_dfs = pickle.load(f)
-#     # Split into constituent lists
-#     good_inputs_list = list_of_list_of_dfs[0]
-#     good_outputs_list = list_of_list_of_dfs[1]
-#     all_bad_inputs_list = list_of_list_of_dfs[2]
-#     all_bad_outputs_list = list_of_list_of_dfs[3]
-#     all_interp_inputs_list = list_of_list_of_dfs[4]
-#     all_interp_outputs_list = list_of_list_of_dfs[5]
-# Now, merge the outputs from each core into a single list
+comm.Barrier()
+
 if rank == 0:
-    for i in range(1, size):
+    print("merging")
+    for i in range(0, size):
         with open(f"data/processed/sfs_psp_core_{i}.pkl", "rb") as f:
             list_of_list_of_dfs = pickle.load(f)
 
@@ -298,8 +296,6 @@ if rank == 0:
             ],
             f,
         )
-
-    print("FINISHED")
 
     # # Quick check of results
     # fig, ax = plt.subplots(2, 2)
