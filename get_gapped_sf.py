@@ -167,6 +167,8 @@ for interval_approx in interval_list_approx:
             # Note the input filename
             print("Corresponding input file list: ", file_list_split[rank])
             continue
+        else:
+            print("Interval successfully processed")
         int_norm = utils.normalize(interval)
         good_inputs_list.append(int_norm)
 
@@ -215,8 +217,12 @@ for i, input in enumerate(good_inputs_list):
         )
 
         print(
-            "Removed {0:.1f}% (approx. {1:.1f}% in chunks, {2:.1f}% uniformly)".format(
-                prop_removed * 100, prop_remove_chunks * 100, prop_remove_unif * 100
+            "Core {0} removed {1:.1f}% (approx. {2:.1f}% in chunks, {3:.1f}% uniformly from int {4})".format(
+                rank,
+                prop_removed * 100,
+                prop_remove_chunks * 100,
+                prop_remove_unif * 100,
+                i,
             )
         )
 

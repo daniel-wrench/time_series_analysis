@@ -5,7 +5,7 @@ import pandas as pd
 plt.rcParams.update({"font.size": 10})
 
 # Set seed for reproducibility
-np.random.seed(42)
+# np.random.seed(42)
 
 
 def compute_sf(data, lags, powers=[2], retain_increments=False):
@@ -222,7 +222,7 @@ def plot_sample(
                 suffix = " + squared diffs"
 
             # Plot "confidence region" of +- x SEs
-            x = 8
+            x = 5
             ax[i, j].fill_between(
                 other_outputs_plot[i]["lag"],
                 np.maximum(
