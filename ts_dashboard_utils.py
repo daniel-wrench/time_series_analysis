@@ -43,46 +43,40 @@ def calc_mape(curve1, curve2):
     return mape
 
 
-def remove_data(array, proportion, chunks=None, sigma=0.1):
+def remove_data(array, proportion, chunks=None):
+    """
+    Function to remove data from a time series array, either randomly or in chunks
+
+    Args:
+        array: numpy array or pd.Series, time series data
+        proportion: float, proportion of data to remove
+        chunks: int, number of chunks to remove data in
+
+    Returns:
+        array_bad: numpy array, time series data with missing values
+        array_bad_idx: numpy array, indices of the missing values
+        prop_removed: float, proportion of data removed
+    """
+
     num_obs = proportion * len(array)
+    remove_idx = []
 
     if chunks is None:
-        remove_idx = random.sample(range(len(array)), int(num_obs))
-
+        remove_idx = np.random.choice(len(array), size=int(num_obs), replace=False)
     else:
-        mean_obs = num_obs / chunks
-        std = sigma * 0.341 * 2 * mean_obs
-        remove_idx = []
+        num_obs_per_chunk = int(num_obs / chunks)
+        # std = sigma * 0.341 * 2 * mean_obs
 
-        for i in range(chunks):
-            num_obs = round(random.gauss(mu=mean_obs, sigma=std))
-            # Comment out the line above and replace num_obs below with mean_obs to revert to equal sized chunks
-            if num_obs < 0:
-                raise Exception("sigma too high, got negative obs")
-            start = random.randrange(
-                start=1, stop=len(array) - num_obs
-            )  # Starting point for each removal should be far enough from the start and end of the series
-            remove = np.arange(start, start + num_obs)
+        for _ in range(chunks):
+            start = np.random.randint(low=1, high=len(array) - num_obs_per_chunk)
+            remove_idx.extend(range(start, start + num_obs_per_chunk))
 
-            remove_idx.extend(remove)
-
-        prop_missing = len(np.unique(remove_idx)) / len(array)
-
-        while prop_missing < proportion:
-            start = random.randrange(
-                start=1, stop=len(array) - num_obs
-            )  # Starting point for each removal should be far enough from the start and end of the series
-            remove = np.arange(start, start + num_obs)
-            remove_idx.extend(remove)
-
-            prop_missing = len(np.unique(remove_idx)) / len(array)
-
-    remove_idx = [int(x) for x in remove_idx]  # Converting decimals to integers
     array_bad = array.copy()
     array_bad[remove_idx] = np.nan
 
+    prop_removed = np.sum(np.isnan(array_bad)) / len(array)
     # Will be somewhat different from value specified if removed in chunks
-    prop_removed = np.sum(pd.isna(array_bad)) / len(array)
+
     # Below are needed if interpolating a numpy array, rather than a dataframe
     idx = np.arange(len(array))
     array_bad_idx = np.delete(idx, remove_idx)

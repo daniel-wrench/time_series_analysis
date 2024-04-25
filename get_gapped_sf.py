@@ -51,7 +51,7 @@ except ImportError:
 
 # Get list of files in psp directory and split between cores
 # (if running in parallel)
-raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))[:2]
+raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))
 file_list_split = np.array_split(raw_file_list, size)
 
 # Broadcast the list of files to all cores
@@ -202,7 +202,7 @@ for i, input in enumerate(good_inputs_list):
         prop_remove_chunks = total_removal * ratio_removal
         prop_remove_unif = total_removal * (1 - ratio_removal)
         bad_input_temp, bad_input_ind, prop_removed = ts.remove_data(
-            input, prop_remove_chunks, chunks=5
+            input, prop_remove_chunks, chunks=np.random.randint(1, 10)
         )
         bad_input, bad_input_ind, prop_removed = ts.remove_data(
             bad_input_temp, prop_remove_unif

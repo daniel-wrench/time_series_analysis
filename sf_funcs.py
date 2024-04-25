@@ -127,7 +127,7 @@ def plot_sample(
     for i in range(n):
         missing = other_outputs_plot[i]["missing_prop_overall"].values[0]
         # missing = np.isnan(ts_plot).sum() / len(ts_plot)
-        ax[i, 0].plot(good_input[input_ind], color="grey", lw=0.8)
+        ax[i, 0].plot(good_input[input_ind].values, color="grey", lw=0.8)
         ax[i, 0].plot(other_inputs_plot[i], color="black", lw=0.8)
 
         # Add the missing % as an annotation in the top left
@@ -341,7 +341,7 @@ def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
     plt.show()
 
 
-def create_heatmap_lookup(inputs, missing_measure, num_bins=25):
+def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
     """Extract the mean error for each bin of lag and missing measure.
     Args:
         num_bins: The number of bins to use in each direction (x and y)
@@ -351,8 +351,21 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25):
     y = inputs[missing_measure]
 
     heatmap, xedges, yedges = np.histogram2d(
-        x, y, bins=num_bins, range=[[0, 1000], [0, 1]]
+        x, y, bins=num_bins, range=[[0, inputs.lag.max()], [0, 1]]
     )
+
+    if log is True:
+        xedges = np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 1
+        # y_bins = np.logspace(0, 2, num_bins) / 100 - 0.01
+        # y_bins[-1] = 1
+        xedges[-1] = inputs.lag.max() + 1
+
+        # _, xedges, _ = np.histogram2d(
+        #     x,
+        #     y,
+        #     bins=[x_bins, y_bins],
+        # )
+
     data = {"Lag": [], missing_measure: [], "MPE": []}
     # Calculate the mean value in each bin
     xidx = np.digitize(x, xedges) - 1  # correcting for annoying 1-indexing
@@ -447,7 +460,9 @@ def plot_heatmap(
     im.set_clim(-100, 100)
 
     if log is True:
+        print(xedges[-1])
         ax.semilogx()
+        ax.set_xlim(1, 250)
 
     ax.set_facecolor("black")  # So we can distinguish 0 means from missing means
     ax.set_ylabel(missing_measure)
