@@ -3,7 +3,8 @@
 #SBATCH --job-name          get_gapped_sf
 #SBATCH --partition         parallel
 ##SBATCH --reservation	    SpjReservation
-##SBATCH --nodelist          spj01
+#SBATCH --nodelist          amd02n04
+## spj01
 #SBATCH --mem               50G
 #SBATCH --cpus-per-task     12
 #SBATCH --time              00:30:00
@@ -21,6 +22,6 @@ source venv/bin/activate
 echo "JOB STARTED"
 date
 
-mpirun --oversubscribe -n 12 python get_gapped_sf.py 2
+mpirun --oversubscribe -n 12 python get_gapped_sf.py 10
 
 echo "FINISHED"
