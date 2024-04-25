@@ -1,8 +1,6 @@
 TurbAn/*
 data/*
-__pycache__/*
+__pycache__/*.pyc
 *.out
 *.err
 venv/
-__pycache__/*
-*.pyc
