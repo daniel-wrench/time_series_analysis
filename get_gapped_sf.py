@@ -301,15 +301,15 @@ if rank == 0:
 
     print("FINISHED")
 
-    # Quick check of results
-    fig, ax = plt.subplots(2, 2)
-    for i in range(2):
-        ax[i, 0].plot(good_inputs_list[-i].values)
-        ax[i, 0].plot(all_interp_inputs_list[-i][-1])
-        ax[i, 0].plot(all_bad_inputs_list[-i][-1])
-        ax[i, 1].plot(good_outputs_list[-i]["sosf"])
-        ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
-        ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
+    # # Quick check of results
+    # fig, ax = plt.subplots(2, 2)
+    # for i in range(2):
+    #     ax[i, 0].plot(good_inputs_list[-i].values)
+    #     ax[i, 0].plot(all_interp_inputs_list[-i][-1])
+    #     ax[i, 0].plot(all_bad_inputs_list[-i][-1])
+    #     ax[i, 1].plot(good_outputs_list[-i]["sosf"])
+    #     ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
+    #     ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
 
-    plt.savefig("data/processed/validation_plot.png")
-    print("Validation plot saved")
+    # plt.savefig("data/processed/validation_plot.png")
+    # print("Validation plot saved")
