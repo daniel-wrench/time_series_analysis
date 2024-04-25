@@ -4,3 +4,4 @@ src/__pycache__/*
 *.out
 *.err
 venv/
+__pycache__/*
