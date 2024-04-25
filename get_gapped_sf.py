@@ -261,6 +261,18 @@ list_of_list_of_dfs = [
 with open(f"data/processed/sfs_psp_core_{rank}.pkl", "wb") as f:
     pickle.dump(list_of_list_of_dfs, f)
 
+print("Core ", rank, " finished")
+
+# Open the pickle file of results
+# with open("data/processed/sfs_psp.pkl", "rb") as f:
+#     list_of_list_of_dfs = pickle.load(f)
+#     # Split into constituent lists
+#     good_inputs_list = list_of_list_of_dfs[0]
+#     good_outputs_list = list_of_list_of_dfs[1]
+#     all_bad_inputs_list = list_of_list_of_dfs[2]
+#     all_bad_outputs_list = list_of_list_of_dfs[3]
+#     all_interp_inputs_list = list_of_list_of_dfs[4]
+#     all_interp_outputs_list = list_of_list_of_dfs[5]
 # Now, merge the outputs from each core into a single list
 if rank == 0:
     for i in range(1, size):
@@ -287,27 +299,17 @@ if rank == 0:
             f,
         )
 
-print("Core ", rank, " finished")
-# Open the pickle file of results
-# with open("data/processed/sfs_psp.pkl", "rb") as f:
-#     list_of_list_of_dfs = pickle.load(f)
-#     # Split into constituent lists
-#     good_inputs_list = list_of_list_of_dfs[0]
-#     good_outputs_list = list_of_list_of_dfs[1]
-#     all_bad_inputs_list = list_of_list_of_dfs[2]
-#     all_bad_outputs_list = list_of_list_of_dfs[3]
-#     all_interp_inputs_list = list_of_list_of_dfs[4]
-#     all_interp_outputs_list = list_of_list_of_dfs[5]
+    print("FINISHED")
 
-# Quick check of results
-fig, ax = plt.subplots(2, 2)
-for i in range(2):
-    ax[i, 0].plot(good_inputs_list[-i].values)
-    ax[i, 0].plot(all_interp_inputs_list[-i][-1])
-    ax[i, 0].plot(all_bad_inputs_list[-i][-1])
-    ax[i, 1].plot(good_outputs_list[-i]["sosf"])
-    ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
-    ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
+    # Quick check of results
+    fig, ax = plt.subplots(2, 2)
+    for i in range(2):
+        ax[i, 0].plot(good_inputs_list[-i].values)
+        ax[i, 0].plot(all_interp_inputs_list[-i][-1])
+        ax[i, 0].plot(all_bad_inputs_list[-i][-1])
+        ax[i, 1].plot(good_outputs_list[-i]["sosf"])
+        ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
+        ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
 
-plt.savefig("data/processed/validation_plot.png")
-print("Validation plot saved")
+    plt.savefig("data/processed/validation_plot.png")
+    print("Validation plot saved")
