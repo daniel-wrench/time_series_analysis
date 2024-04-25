@@ -35,9 +35,12 @@ def compute_sf(data, lags, powers=[2], retain_increments=False):
                 dax = np.abs(ax.shift(-lag) - ax)
                 strct = dax.pow(i)
                 array += [strct.values]
-
                 strct_mean = strct.mean()
-                median_abs_diff = np.nanmedian(np.abs(dax))
+                if dax.isnull().sum() != len(dax):
+                    # Otherwise this func will raise an error
+                    median_abs_diff = np.nanmedian(dax)
+                else:
+                    median_abs_diff = np.nan
                 mean_array += [strct_mean]
                 mapd_array += [median_abs_diff]
                 strct_std = strct.std()
