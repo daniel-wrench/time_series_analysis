@@ -4,5 +4,4 @@ __pycache__/*
 *.out
 *.err
 venv/
-__pycache__/*
 *.pyc
