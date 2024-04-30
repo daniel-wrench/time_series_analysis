@@ -161,11 +161,11 @@ for interval_approx in interval_list_approx:
         0, len(interval_approx_resampled) - interval_length + 1, interval_length
     ):
         interval = interval_approx_resampled.iloc[i : i + interval_length]
-        # CHeck if interval is all NaNs
-        if interval.isnull().sum() == len(interval):
-            print("All NaNs in interval, skipping (may be due to resampling")
+        # Check if interval is complete
+        if interval.isnull().sum() > 0:
+            print("Int contains missing data; skipping")
             # Note the input filename
-            print("Corresponding input file list: ", file_list_split[rank])
+            print("corresponding input file list: ", file_list_split[rank])
             continue
         else:
             print("Interval successfully processed")
@@ -215,6 +215,9 @@ for i, input in enumerate(good_inputs_list):
         bad_input, bad_input_ind, prop_removed = ts.remove_data(
             bad_input_temp, prop_remove_unif
         )
+        if prop_removed >= 0.95 or prop_removed == 0:
+            print(">95% or 0% data removed, skipping")
+            continue
 
         print(
             "Core {0} removed {1:.1f}% (approx. {2:.1f}% in chunks, {3:.1f}% uniformly from int {4})".format(
