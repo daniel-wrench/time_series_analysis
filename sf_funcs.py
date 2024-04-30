@@ -1,11 +1,19 @@
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, tight_layout
 import numpy as np
 import pandas as pd
 
-plt.rcParams.update({"font.size": 10})
+# Because Rāpoi can't handle latex apparently
+plt.rcParams.update(
+    {
+        "text.usetex": False,
+        "mathtext.fontset": "stix",  # Set the font to use for math
+        "font.family": "serif",  # Set the default font family
+        # "font.size": 10
+    }
+)
 
 # Set seed for reproducibility
-# np.random.seed(42)
+np.random.seed(42)
 
 
 def compute_sf(data, lags, powers=[2], retain_increments=False):
@@ -135,7 +143,7 @@ def plot_sample(
 
         # Add the missing % as an annotation in the top left
         ax[i, 0].annotate(
-            f"{missing*100:.2f}\% missing",
+            f"{missing*100:.2f}% missing",
             xy=(1, 1),
             xycoords="axes fraction",
             xytext=(0.05, 0.85),
@@ -161,7 +169,7 @@ def plot_sample(
         ax[i, ncols - 1].plot(
             other_outputs_plot[i]["missing_prop"] * 100,
             color=colour,
-            label="\% pairs missing",
+            label="% pairs missing",
         )
         ax[i, ncols - 1].semilogx()
         ax[i, ncols - 1].set_ylim(0, 100)
@@ -172,15 +180,13 @@ def plot_sample(
         ax2 = ax[i, ncols - 1].twinx()
         # ax2.plot(sfn_pm["N"], color=colour, label="\# points")
 
-        ax2.plot(
-            other_outputs_plot[i]["error_percent"], color="black", label="\% error"
-        )
+        ax2.plot(other_outputs_plot[i]["error_percent"], color="black", label="% error")
         ax2.semilogx()
         ax2.set_ylim(-100, 100)
         ax2.axhline(0, color="black", linestyle="--")
         if i == 0:
             ax2.annotate(
-                "\% error",
+                "% error",
                 xy=(1, 1),
                 xycoords="axes fraction",
                 xytext=(0.75, 0.85),
@@ -262,7 +268,7 @@ def plot_sample(
     ax[0, 1].legend(loc="lower right", frameon=True)
 
     ax[0, ncols - 1].annotate(
-        "\% pairs missing",
+        "% pairs missing",
         xy=(1, 1),
         xycoords="axes fraction",
         xytext=(0.05, 0.85),
@@ -278,9 +284,11 @@ def plot_sample(
     # plt.show()
 
 
-def plot_error_trend_line(other_outputs_df):
-    fig, ax = plt.subplots(figsize=(5, 5))
-    plt.title("SF estimation error vs. lag and global sparsity")
+def plot_error_trend_line(
+    other_outputs_df, title="SF estimation error vs. lag and global sparsity"
+):
+    fig, ax = plt.subplots(figsize=(6, 3))
+    plt.title(title)
     # plt.plot(lag_error_mean_i, color="black", lw=3)
     plt.scatter(
         other_outputs_df["lag"],
@@ -303,20 +311,22 @@ def plot_error_trend_line(other_outputs_df):
     )
 
     cb = plt.colorbar()
-    cb.set_label("\% missing overall")
+    cb.set_label("% missing overall")
     # Change range of color bar
     plt.hlines(0, 1, other_outputs_df.lag.max(), color="black", linestyle="--")
     plt.clim(0, 1)
     plt.ylim(-120, 500)
     plt.semilogx()
     plt.xlabel("Lag ($\\tau$)")
-    plt.ylabel("\% error")
+    plt.ylabel("% error")
     plt.legend(loc="upper right")
     # plt.show()
 
 
-def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
-    fig, ax = plt.subplots(figsize=(5, 5))
+def plot_error_trend_scatter(
+    bad_outputs_df, interp_outputs_df, title="Overall % error vs. sparsity"
+):
+    fig, ax = plt.subplots(figsize=(6, 3), tight_layout=True)
     sfn_mape = bad_outputs_df.groupby("missing_prop_overall")["error_percent"].agg(
         lambda x: np.mean(np.abs(x))
     )
@@ -350,7 +360,7 @@ def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
     plt.xlabel("Fraction of data missing overall")
     plt.ylabel("MAPE")
     plt.ylim(0, 150)
-    plt.title("Overall \% error vs. sparsity (chunks)")
+    plt.title(title)
     plt.legend()
     # plt.show()
 

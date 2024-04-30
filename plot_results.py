@@ -4,7 +4,16 @@ import matplotlib.pyplot as plt
 import utils as utils  # copied directly from Reynolds project, normalize() added
 import sf_funcs as sf
 import pickle
-import importlib
+
+# Because Rāpoi can't handle latex apparently
+plt.rcParams.update(
+    {
+        "text.usetex": False,
+        "mathtext.fontset": "stix",  # Set the font to use for math
+        "font.family": "serif",  # Set the default font family
+        # "font.size": 10,
+    }
+)
 
 input_path = "data/processed/sfs_psp_local.pkl"
 save_dir = "plots_local/"
@@ -12,7 +21,6 @@ missing_measure = "missing_prop"
 n_bins = 18
 input_ind = 2
 n = 4
-
 
 print("Reading in processed data...")
 with open(input_path, "rb") as f:
@@ -29,7 +37,7 @@ with open(input_path, "rb") as f:
 ) = list_of_list_of_dfs
 
 print(
-    f"\n... = {len(all_interp_outputs_list[0])} versions of {len(all_interp_outputs_list)} inputs"
+    f"... = {len(all_interp_outputs_list[0])} versions of {len(all_interp_outputs_list)} inputs"
 )
 print("Now plotting figures.")
 # Check results, for a given clean input
@@ -81,24 +89,29 @@ interp_outputs_df = pd.concat(
 interp_outputs_df.index.names = ["Original interval", "Interval version", "Lag"]
 
 # View trends as fn of OVERALL missing amount
-sf.plot_error_trend_line(bad_outputs_df)
+sf.plot_error_trend_line(other_outputs_df=bad_outputs_df)
 plt.savefig(save_dir + "psp_missing_effect_holistic.png")
 plt.clf()
 
-sf.plot_error_trend_line(interp_outputs_df)
+sf.plot_error_trend_line(
+    other_outputs_df=interp_outputs_df,
+    title="SF estimation error vs. lag and global sparsity (LINT)",
+)
 plt.savefig(save_dir + "psp_missing_effect_holistic_lint.png")
 plt.clf()
 
 
 def plot_average_errors(df):
+    fig, ax = plt.subplots(figsize=(6, 3))
     stats = df.groupby("Lag")["error_percent"].describe()
-    plt.plot(stats["mean"], lw=3, label="Mean \% error")
-    plt.plot(stats["50%"], lw=3, label="Median \% error")
+    plt.plot(stats["mean"], lw=3, label="Mean % error")
+    plt.plot(stats["50%"], lw=3, label="Median % error")
     plt.semilogx()
     plt.legend()
 
 
 plot_average_errors(bad_outputs_df)
+plt.title("Average errors by lag in naive SFs")
 plt.savefig(save_dir + "psp_missing_effect_holistic_avg.png")
 plt.clf()
 
@@ -147,7 +160,7 @@ plt.colorbar(hb[3], ax=ax, label="Counts")
 hb[3].set_clim(0, hb[0].max())
 plt.xlabel("Lag")
 plt.ylabel("Missing proportion")
-plt.title("Distribution of missing proportion and lag")
+plt.title("Distribution of missing proportion and lag (linear bins)")
 plt.savefig(save_dir + "psp_heatmap_sample_size.png")
 plt.clf()
 
@@ -253,7 +266,7 @@ for i, df_to_plot in enumerate(other_outputs_plot):
     axs[i, 1].semilogy()
     axs[i, 1].legend(loc="lower right")
     axs[i, 1].set_title(
-        f"Input version {i+1} with {np.round(sf_corrected['missing_prop_overall'].values[0]*100, 2)}\% missing"
+        f"Input version {i+1} with {np.round(sf_corrected['missing_prop_overall'].values[0]*100, 2)}% missing"
     )
 
     # if log is True:
@@ -291,9 +304,9 @@ plt.clf()
 
 # Plotting 3D heatmaps
 
-fig, ax = plt.subplots(1, n_bins, figsize=(25, 2))
+fig, ax = plt.subplots(1, n_bins, figsize=(n_bins * 3, 3), tight_layout=True)
 # Remove spacing between subplots
-plt.subplots_adjust(wspace=0.1)
+plt.subplots_adjust(wspace=0.2)
 for i in range(n_bins):
     c = ax[i].pcolormesh(
         heatmap_bin_edges_3d[0],
@@ -319,9 +332,9 @@ for i in range(n_bins):
 plt.savefig(save_dir + "psp_heatmap_3d_power.png")
 plt.clf()
 
-fig, ax = plt.subplots(1, n_bins, figsize=(25, 2))
+fig, ax = plt.subplots(1, n_bins, figsize=(n_bins * 3, 3), tight_layout=True)
 # Remove spacing between subplots
-plt.subplots_adjust(wspace=0.1)
+plt.subplots_adjust(wspace=0.2)
 for i in range(n_bins):
     c = ax[i].pcolormesh(
         heatmap_bin_edges_3d[1],
@@ -348,9 +361,9 @@ for i in range(n_bins):
 plt.savefig(save_dir + "psp_heatmap_3d_lag.png")
 plt.clf()
 
-fig, ax = plt.subplots(1, n_bins, figsize=(25, 2))
+fig, ax = plt.subplots(1, n_bins, figsize=(n_bins * 3, 3), tight_layout=True)
 # Remove spacing between subplots
-plt.subplots_adjust(wspace=0.1)
+plt.subplots_adjust(wspace=0.2)
 for i in range(n_bins):
     c = ax[i].pcolormesh(
         heatmap_bin_edges_3d[0],
