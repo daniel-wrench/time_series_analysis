@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,26 +16,36 @@ plt.rcParams.update(
     }
 )
 
-input_path = "data/processed/sfs_psp.pkl"
+input_path = "data/processed/"
 save_dir = "plots/"
 missing_measure = "missing_prop"
 n_bins = 18
 input_ind = 2
 n = 4
 
-print("Reading in processed data...")
-with open(input_path, "rb") as f:
-    list_of_list_of_dfs = pickle.load(f)
+print("Reading in processed data files, merging...")
+# List all pickle files in the folder
+pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")]
 
-# Unpack the list of list of dfs
-(
-    good_inputs_list,
-    good_outputs_list,
-    all_bad_inputs_list,
-    all_bad_outputs_list,
-    all_interp_inputs_list,
-    all_interp_outputs_list,
-) = list_of_list_of_dfs
+good_inputs_list = []
+good_outputs_list = []
+all_bad_inputs_list = []
+all_bad_outputs_list = []
+all_interp_inputs_list = []
+all_interp_outputs_list = []
+
+# Read in all pickle files in the directory
+for file in pickle_files:
+    with open(os.path.join(input_path, file), "rb") as file:
+        list_of_list_of_dfs = pickle.load(file)
+
+        good_inputs_list += list_of_list_of_dfs[0]
+        good_outputs_list += list_of_list_of_dfs[1]
+        all_bad_inputs_list += list_of_list_of_dfs[2]
+        all_bad_outputs_list += list_of_list_of_dfs[3]
+        all_interp_inputs_list += list_of_list_of_dfs[4]
+        all_interp_outputs_list += list_of_list_of_dfs[5]
+
 
 print(
     f"... = {len(all_interp_outputs_list[0])} versions of {len(all_interp_outputs_list)} inputs"

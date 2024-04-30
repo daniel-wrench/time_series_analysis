@@ -284,43 +284,15 @@ with open(f"data/processed/sfs_psp_core_{rank}.pkl", "wb") as f:
 
 print("Core ", rank, " finished")
 
-comm.Barrier()
+# # Quick check of results
+# fig, ax = plt.subplots(2, 2)
+# for i in range(2):
+#     ax[i, 0].plot(good_inputs_list[-i].values)
+#     ax[i, 0].plot(all_interp_inputs_list[-i][-1])
+#     ax[i, 0].plot(all_bad_inputs_list[-i][-1])
+#     ax[i, 1].plot(good_outputs_list[-i]["sosf"])
+#     ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
+#     ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
 
-if rank == 0:
-    print("Central process: merging outputs of each core")
-    for i in range(0, size):
-        with open(f"data/processed/sfs_psp_core_{i}.pkl", "rb") as f:
-            list_of_list_of_dfs = pickle.load(f)
-
-        good_inputs_list += list_of_list_of_dfs[0]
-        good_outputs_list += list_of_list_of_dfs[1]
-        all_bad_inputs_list += list_of_list_of_dfs[2]
-        all_bad_outputs_list += list_of_list_of_dfs[3]
-        all_interp_inputs_list += list_of_list_of_dfs[4]
-        all_interp_outputs_list += list_of_list_of_dfs[5]
-
-    with open("data/processed/sfs_psp.pkl", "wb") as f:
-        pickle.dump(
-            [
-                good_inputs_list,
-                good_outputs_list,
-                all_bad_inputs_list,
-                all_bad_outputs_list,
-                all_interp_inputs_list,
-                all_interp_outputs_list,
-            ],
-            f,
-        )
-
-    # # Quick check of results
-    # fig, ax = plt.subplots(2, 2)
-    # for i in range(2):
-    #     ax[i, 0].plot(good_inputs_list[-i].values)
-    #     ax[i, 0].plot(all_interp_inputs_list[-i][-1])
-    #     ax[i, 0].plot(all_bad_inputs_list[-i][-1])
-    #     ax[i, 1].plot(good_outputs_list[-i]["sosf"])
-    #     ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
-    #     ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
-
-    # plt.savefig("data/processed/validation_plot.png")
-    # print("Validation plot saved")
+# plt.savefig("data/processed/validation_plot.png")
+# print("Validation plot saved")
