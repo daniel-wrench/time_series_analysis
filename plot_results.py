@@ -15,8 +15,8 @@ plt.rcParams.update(
     }
 )
 
-input_path = "data/processed/sfs_psp_local.pkl"
-save_dir = "plots_local/"
+input_path = "data/processed/sfs_psp.pkl"
+save_dir = "plots/"
 missing_measure = "missing_prop"
 n_bins = 18
 input_ind = 2

@@ -51,14 +51,17 @@ except ImportError:
 
 # Get list of files in psp directory and split between cores
 # (if running in parallel)
-raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))
+# raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf")) # LOCAL
+raw_file_list = sorted(
+    glob.iglob("data/raw/psp/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+)  # HPC
 file_list_split = np.array_split(raw_file_list, size)
 
 # Broadcast the list of files to all cores
 file_list_split = comm.bcast(file_list_split, root=0)
 
 # For each core, load in the data from the files assigned to that core
-print("Core ", rank)
+print("Core ", rank, "reading data")
 psp_data = dif.read_cdfs(
     file_list_split[rank],
     {"epoch_mag_RTN": (0), "psp_fld_l2_mag_RTN": (0, 3), "label_RTN": (0, 3)},
@@ -144,7 +147,7 @@ for interval_approx in interval_list_approx:
         tce = 500
         new_cadence = tce_n * tce / interval_length
         print(
-            f"tce not found for this chunk, setting to 500s (default) -> cadence = {new_cadence}s"
+            f"tce not found for this interval, setting to 500s (default) -> cadence = {new_cadence}s"
         )
 
     else:
@@ -163,14 +166,15 @@ for interval_approx in interval_list_approx:
         interval = interval_approx_resampled.iloc[i : i + interval_length]
         # Check if interval is complete
         if interval.isnull().sum() > 0:
-            print("Int contains missing data; skipping")
-            # Note the input filename
-            print("corresponding input file list: ", file_list_split[rank])
+            print("interval contains missing data even after down-sampling; skipping")
+            # Note: due to merging cannot identify specific file with missing data here
+            # only file list as here:
+            # print("corresponding input file list: ", file_list_split[rank])
             continue
         else:
-            print("Interval successfully processed")
-        int_norm = utils.normalize(interval)
-        good_inputs_list.append(int_norm)
+            # print("Interval successfully processed")
+            int_norm = utils.normalize(interval)
+            good_inputs_list.append(int_norm)
 
 print(
     "\nNumber of standardised intervals: "
@@ -191,8 +195,9 @@ all_bad_outputs_list = []
 all_interp_inputs_list = []
 all_interp_outputs_list = []
 
+print("Core ", rank, "creating gaps and calculating structure functions")
 for i, input in enumerate(good_inputs_list):
-    print(f"\nCore {rank} processing standardised interval {i}")
+    # print(f"\nCore {rank} processing standardised interval {i}")
     good_output = sf.compute_sf(pd.DataFrame(input), lags, powers)
     good_outputs_list.append(good_output)
 
@@ -216,18 +221,18 @@ for i, input in enumerate(good_inputs_list):
             bad_input_temp, prop_remove_unif
         )
         if prop_removed >= 0.95 or prop_removed == 0:
-            print(">95% or 0% data removed, skipping")
+            # print(">95% or 0% data removed, skipping")
             continue
 
-        print(
-            "Core {0} removed {1:.1f}% (approx. {2:.1f}% in chunks, {3:.1f}% uniformly from int {4})".format(
-                rank,
-                prop_removed * 100,
-                prop_remove_chunks * 100,
-                prop_remove_unif * 100,
-                i,
-            )
-        )
+        # print(
+        #     "Core {0} removed {1:.1f}% (approx. {2:.1f}% in chunks, {3:.1f}% uniformly from int {4})".format(
+        #         rank,
+        #         prop_removed * 100,
+        #         prop_remove_chunks * 100,
+        #         prop_remove_unif * 100,
+        #         i,
+        #     )
+        # )
 
         bad_inputs_list.append(bad_input.values)
 
@@ -263,6 +268,7 @@ for i, input in enumerate(good_inputs_list):
 # converting from pd.Series to list of np.arrays to save space
 all_good_inputs_list = [interval.values for interval in good_inputs_list]
 
+print("Core ", rank, " saving outputs")
 # Export each list of outputs to a pickle file
 list_of_list_of_dfs = [
     good_inputs_list,
@@ -281,7 +287,7 @@ print("Core ", rank, " finished")
 comm.Barrier()
 
 if rank == 0:
-    print("merging")
+    print("Central process: merging outputs of each core")
     for i in range(0, size):
         with open(f"data/processed/sfs_psp_core_{i}.pkl", "rb") as f:
             list_of_list_of_dfs = pickle.load(f)
