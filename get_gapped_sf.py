@@ -53,7 +53,8 @@ except ImportError:
 # (if running in parallel)
 # raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf")) # LOCAL
 raw_file_list = sorted(
-    glob.iglob("data/raw/psp/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+    glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+# /nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/" + "/*.cdf")
 )  # HPC
 file_list_split = np.array_split(raw_file_list, size)
 
