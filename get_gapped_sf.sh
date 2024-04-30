@@ -5,8 +5,8 @@
 ##SBATCH --reservation	    SpjReservation
 #SBATCH --nodelist          amd02n04
 ## spj01
-#SBATCH --mem               50G
-#SBATCH --cpus-per-task     12
+#SBATCH --mem               40G
+#SBATCH --cpus-per-task     20
 #SBATCH --time              00:30:00
 #SBATCH --output            %x.out
 #SBATCH --error             %x.err
@@ -22,6 +22,6 @@ source venv/bin/activate
 echo "JOB STARTED"
 date
 
-mpirun --oversubscribe -n 12 python get_gapped_sf.py 10
+mpirun --oversubscribe -n 20 python get_gapped_sf.py 50
 
 echo "FINISHED"
