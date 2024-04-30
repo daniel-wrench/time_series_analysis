@@ -275,20 +275,23 @@ def plot_sample(
     if linear is True:
         ax[0, 1].set_title("SF$_2$" + suffix)
 
-    plt.show()
+    # plt.show()
 
 
 def plot_error_trend_line(other_outputs_df):
+    fig, ax = plt.subplots(figsize=(5, 5))
     plt.title("SF estimation error vs. lag and global sparsity")
     # plt.plot(lag_error_mean_i, color="black", lw=3)
     plt.scatter(
         other_outputs_df["lag"],
         other_outputs_df["error_percent"],
         c=other_outputs_df["missing_prop_overall"],
-        s=0.5,
+        s=0.2,
         alpha=0.5,
-        cmap="viridis",
+        cmap="spring",
     )
+    median_error = other_outputs_df.groupby("Lag")["error_percent"].median()
+    plt.plot(median_error, color="black", lw=3, label="Median")
 
     plt.annotate(
         "MAPE = {0:.2f}".format(other_outputs_df["error_percent"].abs().mean()),
@@ -302,16 +305,18 @@ def plot_error_trend_line(other_outputs_df):
     cb = plt.colorbar()
     cb.set_label("\% missing overall")
     # Change range of color bar
-    plt.hlines(0, 1, 1000, color="black", linestyle="--")
+    plt.hlines(0, 1, other_outputs_df.lag.max(), color="black", linestyle="--")
     plt.clim(0, 1)
-    # plt.ylim(-200, 200)
+    plt.ylim(-120, 500)
     plt.semilogx()
     plt.xlabel("Lag ($\\tau$)")
     plt.ylabel("\% error")
-    plt.show()
+    plt.legend(loc="upper right")
+    # plt.show()
 
 
 def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
+    fig, ax = plt.subplots(figsize=(5, 5))
     sfn_mape = bad_outputs_df.groupby("missing_prop_overall")["error_percent"].agg(
         lambda x: np.mean(np.abs(x))
     )
@@ -319,8 +324,14 @@ def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
     sfn_mape_i = interp_outputs_df.groupby("missing_prop_overall")["error_percent"].agg(
         lambda x: np.mean(np.abs(x))
     )
-    plt.scatter(sfn_mape.index, sfn_mape.values, c="C0", label="No handling")
-    plt.scatter(sfn_mape_i.index, sfn_mape_i.values, c="purple", label="Linear interp.")
+    plt.scatter(sfn_mape.index, sfn_mape.values, c="C0", label="No handling", alpha=0.5)
+    plt.scatter(
+        sfn_mape_i.index,
+        sfn_mape_i.values,
+        c="purple",
+        label="Linear interp.",
+        alpha=0.3,
+    )
 
     # Add regression lines
     import statsmodels.api as sm
@@ -338,10 +349,10 @@ def plot_error_trend_scatter(bad_outputs_df, interp_outputs_df):
 
     plt.xlabel("Fraction of data missing overall")
     plt.ylabel("MAPE")
-    plt.ylim(0, 100)
+    plt.ylim(0, 150)
     plt.title("Overall \% error vs. sparsity (chunks)")
     plt.legend()
-    plt.show()
+    # plt.show()
 
 
 def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
@@ -358,7 +369,9 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
     )
 
     if log is True:
-        xedges = np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 1
+        xedges = (
+            np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.1
+        )  # so that first lag bin starts just before 1
         # y_bins = np.logspace(0, 2, num_bins) / 100 - 0.01
         # y_bins[-1] = 1
         xedges[-1] = inputs.lag.max() + 1
@@ -379,7 +392,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
             # If there are any values, calculate the mean for that bin
             if len(x[(xidx == i) & (yidx == j)]) > 0:
                 # means[i, j] = np.mean(y[(xidx == i) & (yidx == j)])
-                lag_prop_mean = np.mean(
+                lag_prop_mean = np.nanmedian(
                     inputs["error_percent"][(xidx == i) & (yidx == j)]
                 )
                 means[i, j] = lag_prop_mean
@@ -390,7 +403,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
     return means, [xedges, yedges], pd.DataFrame(data)
 
 
-def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25):
+def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
     """Extract the mean error for each bin of lag and missing measure.
     Args:
         num_bins: The number of bins to use in each direction (x and y)
@@ -403,6 +416,15 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25):
     xedges = np.linspace(0, inputs.lag.max() + 1, num_bins + 1)  # Lags
     yedges = np.linspace(0, 1, num_bins + 1)  # Missing prop
     zedges = np.linspace(inputs.sosf.min(), inputs.sosf.max(), num_bins + 1)  # Power
+
+    if log is True:
+        xedges = (
+            np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.1
+        )  # so that first lag bin starts just before 1
+        xedges[-1] = inputs.lag.max() + 1
+        zedges = np.logspace(0, np.log10(inputs.sosf.max()), num_bins + 1) - 1
+        # so that first bin starts at 0
+        zedges[-1] = inputs.sosf.max() + 1
 
     data = {"Lag": [], missing_measure: [], "sosf": [], "MPE": []}
     # Calculate the mean value in each bin
@@ -417,7 +439,7 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25):
                 # If there are any values, calculate the mean for that bin
                 if len(x[(xidx == i) & (yidx == j) & (zidx == k)]) > 0:
                     # means[i, j] = np.mean(y[(xidx == i) & (yidx == j)])
-                    lag_prop_mean = np.mean(
+                    lag_prop_mean = np.nanmedian(
                         inputs["error_percent"][(xidx == i) & (yidx == j) & (zidx == k)]
                     )
                     means[i, j, k] = lag_prop_mean
@@ -463,7 +485,6 @@ def plot_heatmap(
     im.set_clim(-100, 100)
 
     if log is True:
-        print(xedges[-1])
         ax.semilogx()
         ax.set_xlim(1, 250)
 
@@ -473,7 +494,7 @@ def plot_heatmap(
     if subplot is None:
         ax.set_xlabel("Lag")
         ax.set_title("SF estimation error using LINT")
-        plt.show()
+        # plt.show()
     else:
         ax.set_title(title)
         if overlay_x is not None:
@@ -504,13 +525,13 @@ def compute_scaling(bad_output, var, heatmap_vals):
         # print(nearest_row)
 
         if len(nearest_row) > 1:
-            print("More than one nearest row found!")
+            print("More than one nearest bin found!")
             result = nearest_row.head(1)
             MPE = result["MPE"].values[0]
             scaling = 1 / (1 + MPE / 100)
 
         elif len(nearest_row) == 0:
-            print("No nearest row found for lag {}! Scaling set to 1".format(i))
+            print("No nearest bin found for lag {}! Scaling set to 1".format(i))
             scaling = 1
         else:
             result = nearest_row.head(1)
@@ -531,9 +552,6 @@ def compute_scaling(bad_output, var, heatmap_vals):
     )
 
     return bad_output
-
-
-from scipy import interpolate
 
 
 def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear"):
@@ -562,13 +580,13 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
         # print(nearest_row)
 
         if len(nearest_row) > 1:
-            print("More than one nearest row found!")
+            print("More than one nearest bin found!")
             result = nearest_row.head(1)
             MPE = result["MPE"].values[0]
             scaling = 1 / (1 + MPE / 100)
 
         elif len(nearest_row) == 0:
-            print("No nearest row found for lag {}! Scaling set to 1".format(i))
+            print("No nearest bin found for lag {}! Scaling set to 1".format(i))
             scaling = 1
         else:
             result = nearest_row.head(1)
@@ -578,7 +596,7 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
         bad_output.loc[i, "scaling"] = scaling
         bad_output.loc[bad_output["error"] == 0, "scaling"] = 1  # Catching 0 errors
 
-    bad_output["sosf_corrected"] = bad_output["sosf"] * bad_output["scaling"]
+    bad_output["sosf_corrected_3d"] = bad_output["sosf"] * bad_output["scaling"]
     # Smoothing potentially jumpy correction
     bad_output["scaling_smoothed"] = (
         bad_output["scaling"].rolling(window=20, min_periods=1).mean()
