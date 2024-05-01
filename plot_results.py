@@ -16,11 +16,14 @@ plt.rcParams.update(
     }
 )
 
+# possible new input path
+# /nfs/scratch/wrenchdani/time_series_analysis/data/processed/latest/
+
 input_path = "data/processed/"
 save_dir = "plots/"
 missing_measure = "missing_prop"
-n_bins = 18
-input_ind = 2
+n_bins = 15
+input_ind = 4
 n = 4
 
 print("Reading in processed data files, merging...")
@@ -100,6 +103,7 @@ interp_outputs_df = pd.concat(
 interp_outputs_df.index.names = ["Original interval", "Interval version", "Lag"]
 
 # View trends as fn of OVERALL missing amount
+
 sf.plot_error_trend_line(other_outputs_df=bad_outputs_df)
 plt.savefig(save_dir + "psp_missing_effect_holistic.png")
 plt.clf()
@@ -138,6 +142,30 @@ print(interp_outputs_df.sort_values("error_percent", ascending=False).head(5))
 
 # Compute heatmap of average error as fn of lag and missing prop at that lag
 # (logarithmic spacing for lags)
+
+# First with no interpolation
+heatmap_bin_vals_log_bad, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
+    sf.create_heatmap_lookup(bad_outputs_df, missing_measure, n_bins, log=True)
+)
+
+fig, ax = plt.subplots(figsize=(7, 5))
+plt.pcolormesh(
+    heatmap_bin_edges_log_bad[0],
+    heatmap_bin_edges_log_bad[1],
+    heatmap_bin_vals_log_bad.T,
+    cmap="bwr",
+)
+plt.colorbar(label="MPE")
+plt.clim(-100, 100)
+plt.xlabel("Lag")
+plt.ylabel("Missing proportion")
+plt.title("Distribution of missing proportion and lag (NO LINT)")
+ax.set_facecolor("black")
+ax.set_xscale("log")
+plt.savefig(save_dir + f"psp_correction_heatmap_{n_bins}_bins_naive.png")
+plt.clf()
+
+# Now with linear interpolation
 heatmap_bin_vals_log, heatmap_bin_edges_log, lookup_table_log = (
     sf.create_heatmap_lookup(interp_outputs_df, missing_measure, n_bins, log=True)
 )
@@ -310,7 +338,7 @@ for i, df_to_plot in enumerate(other_outputs_plot):
     #     subplot=axs[i, 0],
     # )
 
-plt.savefig(save_dir + f"psp_corrected_{n_bins}_bins_CHECK.png")
+plt.savefig(save_dir + f"psp_corrected_{n_bins}_bins.png")
 plt.clf()
 
 # Plotting 3D heatmaps
@@ -360,7 +388,6 @@ for i in range(n_bins):
     plt.title("Distribution of missing proportion and lag")
     ax[i].set_facecolor("black")
     ax[i].semilogy()
-    ax[i].set_ylim(6e-1, 105)
     ax[i].set_title(
         f"Lag bin {i+1}/{n_bins}".format(np.round(heatmap_bin_edges_3d[2][i], 2))
     )

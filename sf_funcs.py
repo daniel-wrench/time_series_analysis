@@ -299,7 +299,9 @@ def plot_error_trend_line(
         cmap="spring",
     )
     median_error = other_outputs_df.groupby("Lag")["error_percent"].median()
-    plt.plot(median_error, color="black", lw=3, label="Median")
+    mean_error = other_outputs_df.groupby("Lag")["error_percent"].mean()
+    plt.plot(median_error, color="black", lw=2, label="Median")
+    plt.plot(mean_error, color="blue", lw=2, label="Mean")
 
     plt.annotate(
         "MAPE = {0:.2f}".format(other_outputs_df["error_percent"].abs().mean()),
@@ -340,7 +342,7 @@ def plot_error_trend_scatter(
         sfn_mape_i.values,
         c="purple",
         label="Linear interp.",
-        alpha=0.3,
+        alpha=0.1,
     )
 
     # Add regression lines
@@ -359,7 +361,7 @@ def plot_error_trend_scatter(
 
     plt.xlabel("Fraction of data missing overall")
     plt.ylabel("MAPE")
-    plt.ylim(0, 150)
+    plt.ylim(0, 120)
     plt.title(title)
     plt.legend()
     # plt.show()
@@ -380,7 +382,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
 
     if log is True:
         xedges = (
-            np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.1
+            np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.01
         )  # so that first lag bin starts just before 1
         # y_bins = np.logspace(0, 2, num_bins) / 100 - 0.01
         # y_bins[-1] = 1
@@ -432,9 +434,7 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
             np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.1
         )  # so that first lag bin starts just before 1
         xedges[-1] = inputs.lag.max() + 1
-        zedges = np.logspace(0, np.log10(inputs.sosf.max()), num_bins + 1) - 1
-        # so that first bin starts at 0
-        zedges[-1] = inputs.sosf.max() + 1
+        zedges = np.logspace(-2, 1, num_bins + 1) # ranges from 0.01 to 10
 
     data = {"Lag": [], missing_measure: [], "sosf": [], "MPE": []}
     # Calculate the mean value in each bin
