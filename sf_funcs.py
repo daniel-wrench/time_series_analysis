@@ -431,7 +431,7 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
 
     if log is True:
         xedges = (
-            np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.1
+            np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.01
         )  # so that first lag bin starts just before 1
         xedges[-1] = inputs.lag.max() + 1
         zedges = np.logspace(-2, 1, num_bins + 1) # ranges from 0.01 to 10
