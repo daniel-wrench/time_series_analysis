@@ -53,8 +53,11 @@ except ImportError:
 # (if running in parallel)
 # raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf")) # LOCAL
 raw_file_list = sorted(
-#    glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
-     glob.iglob("/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/" + "/*.cdf")
+    #    glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+    glob.iglob(
+        "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
+        + "/*.cdf"
+    )
 )  # HPC
 file_list_split = np.array_split(raw_file_list, size)
 
@@ -128,6 +131,7 @@ interval_length_approx = int(tce_approx * tce_approx_n / cadence_approx)
 # We have approximately 10 correlation times in 10,000 points. Let's now be more precise, and calculate the correlation time from each chunk
 
 # Split df into subsets
+
 interval_list_approx = [
     df[i : i + interval_length_approx]
     for i in range(0, len(df) - interval_length_approx + 1, int(interval_length_approx))
@@ -158,29 +162,31 @@ for interval_approx in interval_list_approx:
         )
 
     try:
-	    interval_approx_resampled = interval_approx.resample(
-	        str(np.round(new_cadence, 3)) + "S"
-	    ).mean()  # Resample to higher frequency
+        interval_approx_resampled = interval_approx.resample(
+            str(np.round(new_cadence, 3)) + "S"
+        ).mean()  # Resample to higher frequency
 
-	    for i in range(
-	        0, len(interval_approx_resampled) - interval_length + 1, interval_length
-	    ):
-	        interval = interval_approx_resampled.iloc[i : i + interval_length]
-	        # Check if interval is complete
-	        if interval.isnull().sum() > 0:
-	            print("interval contains missing data even after down-sampling; skipping")
-	            # Note: due to merging cannot identify specific file with missing data here
-	            # only file list as here:
-	            # print("corresponding input file list: ", file_list_split[rank])
-	            continue
-	        else:
-	            # print("Interval successfully processed")
-	            int_norm = utils.normalize(interval)
-	            good_inputs_list.append(int_norm)
+        for i in range(
+            0, len(interval_approx_resampled) - interval_length + 1, interval_length
+        ):
+            interval = interval_approx_resampled.iloc[i : i + interval_length]
+            # Check if interval is complete
+            if interval.isnull().sum() > 0:
+                print(
+                    "interval contains missing data even after down-sampling; skipping"
+                )
+                # Note: due to merging cannot identify specific file with missing data here
+                # only file list as here:
+                # print("corresponding input file list: ", file_list_split[rank])
+                continue
+            else:
+                # print("Interval successfully processed")
+                int_norm = utils.normalize(interval)
+                good_inputs_list.append(int_norm)
 
     except Exception as e:
-	    print(f"An error occurred: {e}")
-            continue
+        print(f"An error occurred: {e}")
+        continue
 
 print(
     "\nNumber of standardised intervals: "
@@ -285,7 +291,10 @@ list_of_list_of_dfs = [
     all_interp_outputs_list,
 ]
 
-with open(f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl", "wb") as f:
+with open(
+    f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl",
+    "wb",
+) as f:
     pickle.dump(list_of_list_of_dfs, f)
 
 print("Core ", rank, " finished")
