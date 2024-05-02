@@ -16,11 +16,9 @@ plt.rcParams.update(
     }
 )
 
-# possible new input path
-# /nfs/scratch/wrenchdani/time_series_analysis/data/processed/latest/
 
-input_path = "data/processed/"
-save_dir = "plots/"
+input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed/"
+save_dir = "plots/big/"
 missing_measure = "missing_prop"
 n_bins = 15
 input_ind = 4
