@@ -17,17 +17,19 @@ plt.rcParams.update(
 )
 
 
-input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed/"
-save_dir = "plots/big/"
+# input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed/"
+input_path = "data/processed/"
+# save_dir = "plots/big/"
+save_dir = "plots_local/"
 missing_measure = "missing_prop"
 n_bins = 15
-input_ind = 4
-n = 4
+input_ind = 0
+n = 2
 
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
-pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")]
-
+# pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")]
+pickle_files = ["sfs_psp_core_0.pkl"]
 good_inputs_list = []
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -59,10 +61,10 @@ sf.plot_sample(
     good_outputs_list,
     all_bad_inputs_list,
     all_bad_outputs_list,
-    "C0",
     input_ind,
     n,
     False,
+    "SF estimation subject to missing data: naive",
 )
 plt.savefig(save_dir + f"psp_missing_effect_int_{input_ind}.png")
 plt.clf()
@@ -72,10 +74,10 @@ sf.plot_sample(
     good_outputs_list,
     all_interp_inputs_list,
     all_interp_outputs_list,
-    "purple",
     input_ind,
     n,
     False,
+    "SF estimation subject to missing data: linear interpolation",
 )
 plt.savefig(save_dir + f"psp_missing_effect_int_{input_ind}_lint.png")
 plt.clf()
@@ -257,7 +259,6 @@ for i, df_to_plot in enumerate(other_outputs_plot):
         xytext=(0.05, 0.9),
         textcoords="axes fraction",
         transform=axs[i, 1].transAxes,
-        c="red",
         bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
     )
 
@@ -283,8 +284,8 @@ for i, df_to_plot in enumerate(other_outputs_plot):
         bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
     )
 
-    axs[i, 1].plot(good_outputs_list[input_ind]["sosf"], c="green", label="True")
-    axs[i, 1].plot(df_to_plot["sosf"], c="red", label="Interp.")
+    axs[i, 1].plot(good_outputs_list[input_ind]["sosf"], color="grey", label="True")
+    axs[i, 1].plot(df_to_plot["sosf"], color="black", label="Interp.")
     # axs[i, 1].plot(
     #     sf_corrected["sosf"] * sf_corrected["scaling"], c="blue", label="Corrected Bad"
     # )
@@ -301,15 +302,13 @@ for i, df_to_plot in enumerate(other_outputs_plot):
     )
     axs[i, 1].semilogx()
     axs[i, 1].semilogy()
+    axs[i, 1].set_ylim(1e-2, 1e1)
     axs[i, 1].legend(loc="lower right")
-    axs[i, 1].set_title(
-        f"Input version {i+1} with {np.round(sf_corrected['missing_prop_overall'].values[0]*100, 2)}% missing"
-    )
 
     # if log is True:
     c = axs[i, 0].pcolormesh(
         heatmap_bin_edges_log[0],
-        heatmap_bin_edges_log[1],
+        heatmap_bin_edges_log[1] * 100,  # convert to % Missing
         heatmap_bin_vals_log.T,
         cmap="bwr",
     )
@@ -319,13 +318,12 @@ for i, df_to_plot in enumerate(other_outputs_plot):
     # axs[i, 0].set_xlabel("Lag")
     axs[i, 0].plot(
         df_to_plot["lag"],
-        df_to_plot[missing_measure],
+        df_to_plot[missing_measure] * 100,
+        c="black",
     )
 
-    axs[i, 0].set_ylabel("Missing proportion (overall)")
-    axs[i, 0].set_title("Correction factor extraction")
     axs[i, 0].set_xscale("log")
-
+    axs[i, 0].set_ylim(0, 100)
     # axs[i, 0] = sf.plot_heatmap(
     #     heatmap_bin_vals_log,
     #     heatmap_bin_edges_log,
@@ -335,7 +333,10 @@ for i, df_to_plot in enumerate(other_outputs_plot):
     #     overlay_y=df_to_plot[missing_measure],
     #     subplot=axs[i, 0],
     # )
-
+axs[0, 1].set_title("Applying correction factor")
+axs[0, 0].set_title("Extracting correction factor")
+axs[n - 1, 0].set_xlabel("Lag ($\\tau$)")
+axs[n - 1, 1].set_xlabel("Lag ($\\tau$)")
 plt.savefig(save_dir + f"psp_corrected_{n_bins}_bins.png")
 plt.clf()
 

@@ -1,3 +1,4 @@
+from turtle import color
 from matplotlib import pyplot as plt, tight_layout
 import numpy as np
 import pandas as pd
@@ -100,10 +101,10 @@ def plot_sample(
     good_output,
     other_inputs,
     other_outputs,
-    colour,
     input_ind=0,
     input_versions=3,  # Either number of versions to plot or a list of versions to plot
     linear=True,
+    title="SF estimation subject to missing data",
 ):
     if linear is False:
         ncols = 3
@@ -118,7 +119,7 @@ def plot_sample(
         other_outputs_plot = [other_outputs[input_ind][i] for i in input_versions]
     else:
         n = input_versions
-        fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 3))
+        fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 4))
         # Before plotting, sort the n bad inputs by missing proportion
         other_inputs_plot = other_inputs[input_ind][:n]
         other_outputs_plot = other_outputs[input_ind][:n]
@@ -146,7 +147,7 @@ def plot_sample(
             f"{missing*100:.2f}% missing",
             xy=(1, 1),
             xycoords="axes fraction",
-            xytext=(0.05, 0.85),
+            xytext=(0.05, 0.9),
             textcoords="axes fraction",
             transform=ax[i, 0].transAxes,
             c="black",
@@ -159,40 +160,39 @@ def plot_sample(
             "MAPE = {:.2f}".format(mape),
             xy=(1, 1),
             xycoords="axes fraction",
-            xytext=(0.05, 0.85),
+            xytext=(0.05, 0.9),
             textcoords="axes fraction",
             transform=ax[i, 1].transAxes,
-            c="black",
             bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
         )
 
         ax[i, ncols - 1].plot(
             other_outputs_plot[i]["missing_prop"] * 100,
-            color=colour,
+            color="black",
             label="% pairs missing",
         )
         ax[i, ncols - 1].semilogx()
         ax[i, ncols - 1].set_ylim(0, 100)
         # Make the y-axis tick labels match the line color
-        for tl in ax[i, ncols - 1].get_yticklabels():
-            tl.set_color(colour)
+        # for tl in ax[i, ncols - 1].get_yticklabels():
+        #    tl.set_color("black")
 
         ax2 = ax[i, ncols - 1].twinx()
         # ax2.plot(sfn_pm["N"], color=colour, label="\# points")
 
-        ax2.plot(other_outputs_plot[i]["error_percent"], color="black", label="% error")
+        ax2.plot(other_outputs_plot[i]["error_percent"], color="blue", label="% error")
         ax2.semilogx()
         ax2.set_ylim(-100, 100)
-        ax2.axhline(0, color="black", linestyle="--")
+        ax2.axhline(0, color="blue", linestyle="--")
         if i == 0:
             ax2.annotate(
                 "% error",
                 xy=(1, 1),
                 xycoords="axes fraction",
-                xytext=(0.75, 0.85),
+                xytext=(0.75, 0.9),
                 textcoords="axes fraction",
                 transform=ax[i, 0].transAxes,
-                c="black",
+                c="blue",
                 bbox=dict(
                     facecolor="white", edgecolor="grey", boxstyle="round", alpha=0.7
                 ),
@@ -226,12 +226,11 @@ def plot_sample(
                     other_lag_vals["sq_diffs"],
                     alpha=0.005,
                     s=1,
-                    c=colour,
                 )
                 suffix = " + squared diffs"
 
             # Plot "confidence region" of +- x SEs
-            x = 5
+            x = 3
             ax[i, j].fill_between(
                 other_outputs_plot[i]["lag"],
                 np.maximum(
@@ -245,7 +244,7 @@ def plot_sample(
                 label=f"$\pm$ {x} SE",
             )
 
-            ax[i, j].set_ylim(1e-2, 2 * good_output[input_ind]["sosf"].max())
+            ax[i, j].set_ylim(1e-2, 1e1)
 
         if linear is True:
             ax[i, 2].semilogx()
@@ -271,15 +270,17 @@ def plot_sample(
         "% pairs missing",
         xy=(1, 1),
         xycoords="axes fraction",
-        xytext=(0.05, 0.85),
+        xytext=(0.05, 0.9),
         textcoords="axes fraction",
         transform=ax[i, 0].transAxes,
-        c=colour,
         bbox=dict(facecolor="white", edgecolor="grey", boxstyle="round", alpha=0.5),
     )
 
     if linear is True:
         ax[0, 1].set_title("SF$_2$" + suffix)
+
+    # Add overall title
+    fig.suptitle(title)
 
     # plt.show()
 
@@ -434,7 +435,7 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
             np.logspace(0, np.log10(inputs.lag.max()), num_bins + 1) - 0.01
         )  # so that first lag bin starts just before 1
         xedges[-1] = inputs.lag.max() + 1
-        zedges = np.logspace(-2, 1, num_bins + 1) # ranges from 0.01 to 10
+        zedges = np.logspace(-2, 1, num_bins + 1)  # ranges from 0.01 to 10
 
     data = {"Lag": [], missing_measure: [], "sosf": [], "MPE": []}
     # Calculate the mean value in each bin
