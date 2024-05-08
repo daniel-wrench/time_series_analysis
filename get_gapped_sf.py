@@ -51,14 +51,15 @@ except ImportError:
 
 # Get list of files in psp directory and split between cores
 # (if running in parallel)
-# raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf")) # LOCAL
-raw_file_list = sorted(
-    #    glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
-    glob.iglob(
-        "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
-        + "/*.cdf"
-    )
-)  # HPC
+raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
+# raw_file_list = sorted(
+#     #    glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+#     glob.iglob(
+#         "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
+#         + "/*.cdf"
+#     )
+# )  # HPC
+
 file_list_split = np.array_split(raw_file_list, size)
 
 # Broadcast the list of files to all cores
@@ -151,15 +152,15 @@ for interval_approx in interval_list_approx:
     if tce == -1:
         tce = 500
         new_cadence = tce_n * tce / interval_length
-        print(
-            f"tce not found for this interval, setting to 500s (default) -> cadence = {new_cadence}s"
-        )
+        # print(
+        #     f"tce not found for this interval, setting to 500s (default) -> cadence = {new_cadence}s"
+        # )
 
     else:
         new_cadence = tce_n * tce / interval_length
-        print(
-            f"tce calculated to be {np.round(tce,2)}s -> cadence = {np.round(new_cadence,2)}s (for {tce_n}tce across {interval_length} points)"
-        )
+        # print(
+        #     f"tce calculated to be {np.round(tce,2)}s -> cadence = {np.round(new_cadence,2)}s (for {tce_n}tce across {interval_length} points)"
+        # )
 
     try:
         interval_approx_resampled = interval_approx.resample(
@@ -189,16 +190,15 @@ for interval_approx in interval_list_approx:
         continue
 
 print(
-    "\nNumber of standardised intervals: "
-    + str(len(good_inputs_list))
-    + "\n(may be more than one per original chunk for small cadences)"
+    "\nNumber of standardised intervals: " + str(len(good_inputs_list))
+    # + "\n(may be more than one per original chunk for small cadences)"
 )
 
 # Logarithmically-spaced lags?
 # vals = np.logspace(0, 3, 0.25 * len(good_inputs_list[0]))
 # lags = np.unique(vals.astype(int))
 lags = np.arange(1, 0.25 * len(good_inputs_list[0]))
-powers = [2]
+powers = [0.5, 2]
 times_to_gap = int(sys.argv[1])
 
 good_outputs_list = []
@@ -253,17 +253,26 @@ for i, input in enumerate(good_inputs_list):
         interp_inputs_list.append(interp_input.values)
 
         bad_output = sf.compute_sf(pd.DataFrame(bad_input), lags, powers)
-        bad_output["error"] = bad_output["sosf"] - good_output["sosf"]
-        bad_output["error_percent"] = bad_output["error"] / good_output["sosf"] * 100
+        for estimator in ["sosf", "ch", "dowd"]:
+            bad_output[estimator + "_error"] = (
+                bad_output[estimator] - good_output[estimator]
+            )
+            bad_output[estimator + "_error_percent"] = (
+                bad_output[estimator + "_error"] / good_output[estimator] * 100
+            )
         bad_output["missing_prop_overall"] = prop_removed
         bad_output["lint"] = False
         bad_outputs_list.append(bad_output)
 
         interp_output = sf.compute_sf(pd.DataFrame(interp_input), lags, powers)
-        interp_output["error"] = interp_output["sosf"] - good_output["sosf"]
-        interp_output["error_percent"] = (
-            interp_output["error"] / good_output["sosf"] * 100
-        )
+
+        for estimator in ["sosf", "ch", "dowd"]:
+            interp_output[estimator + "_error"] = (
+                interp_output[estimator] - good_output[estimator]
+            )
+            interp_output[estimator + "_error_percent"] = (
+                interp_output[estimator + "_error"] / good_output[estimator] * 100
+            )
         interp_output["missing_prop_overall"] = prop_removed
         interp_output["missing_prop"] = bad_output["missing_prop"]
         interp_output["missing_prop"] = bad_output["missing_prop"]
@@ -292,7 +301,8 @@ list_of_list_of_dfs = [
 ]
 
 with open(
-    f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl",
+    f"data/processed/sfs_psp_core_{rank}.pkl",
+    # f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl",
     "wb",
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
