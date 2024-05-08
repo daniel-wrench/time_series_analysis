@@ -5,3 +5,5 @@ __pycache__/*
 *.err
 venv/
 *.pyc
+plots/*
+notebooks/*
