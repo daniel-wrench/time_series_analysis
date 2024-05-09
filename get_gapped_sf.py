@@ -253,7 +253,7 @@ for i, input in enumerate(good_inputs_list):
         interp_inputs_list.append(interp_input.values)
 
         bad_output = sf.compute_sf(pd.DataFrame(bad_input), lags, powers)
-        for estimator in ["sosf", "ch", "dowd"]:
+        for estimator in ["classical", "ch", "dowd"]:
             bad_output[estimator + "_error"] = (
                 bad_output[estimator] - good_output[estimator]
             )
@@ -266,7 +266,7 @@ for i, input in enumerate(good_inputs_list):
 
         interp_output = sf.compute_sf(pd.DataFrame(interp_input), lags, powers)
 
-        for estimator in ["sosf", "ch", "dowd"]:
+        for estimator in ["classical", "ch", "dowd"]:
             interp_output[estimator + "_error"] = (
                 interp_output[estimator] - good_output[estimator]
             )
@@ -276,7 +276,7 @@ for i, input in enumerate(good_inputs_list):
         interp_output["missing_prop_overall"] = prop_removed
         interp_output["missing_prop"] = bad_output["missing_prop"]
         interp_output["missing_prop"] = bad_output["missing_prop"]
-        interp_output["sosf_se"] = bad_output["sosf_se"]
+        interp_output["classical_se"] = bad_output["classical_se"]
         # NOTE: Seems sensible uncertainty is the same for both
         interp_output["lint"] = True
         interp_outputs_list.append(interp_output)
@@ -315,9 +315,9 @@ print("Core ", rank, " finished")
 #     ax[i, 0].plot(good_inputs_list[-i].values)
 #     ax[i, 0].plot(all_interp_inputs_list[-i][-1])
 #     ax[i, 0].plot(all_bad_inputs_list[-i][-1])
-#     ax[i, 1].plot(good_outputs_list[-i]["sosf"])
-#     ax[i, 1].plot(all_interp_outputs_list[-i][-1]["sosf"])
-#     ax[i, 1].plot(all_bad_outputs_list[-i][-1]["sosf"])
+#     ax[i, 1].plot(good_outputs_list[-i]["classical"])
+#     ax[i, 1].plot(all_interp_outputs_list[-i][-1]["classical"])
+#     ax[i, 1].plot(all_bad_outputs_list[-i][-1]["classical"])
 
 # plt.savefig("data/processed/validation_plot.png")
 # print("Validation plot saved")

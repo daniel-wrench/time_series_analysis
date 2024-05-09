@@ -9,7 +9,7 @@ plt.rcParams.update(
         "text.usetex": False,
         "mathtext.fontset": "stix",  # Set the font to use for math
         "font.family": "serif",  # Set the default font family
-        "font.size": 12,
+        "font.size": 11,
     }
 )
 
@@ -61,9 +61,9 @@ def compute_sf(data, lags, powers=[2], retain_increments=False):
             if i == 2:
                 df["lag"] = lags
                 df["n"] = N_array
-                df["sosf"] = mean_array
+                df["classical"] = mean_array
                 df["mapd"] = mapd_array
-                df["sosf_se"] = np.array(std_array) / np.sqrt(N_array)
+                df["classical_se"] = np.array(std_array) / np.sqrt(N_array)
                 if retain_increments is True:
                     df["sq_diffs"] = array
 
@@ -106,7 +106,7 @@ def plot_sample(
     input_ind=0,
     input_versions=3,  # Either number of versions to plot or a list of versions to plot
     linear=True,
-    estimator="sosf",  # sosf, ch, dowd
+    # estimator="classical",  # classical, ch, dowd
     title="SF estimation subject to missing data",
 ):
     if linear is False:
@@ -157,100 +157,114 @@ def plot_sample(
             bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
         )
 
-        mape = other_outputs_plot[i][estimator + "_error_percent"].abs().mean()
+        colors = ["C0", "darkred", "olivedrab"]
+        pos_y = [0.9, 0.8, 0.7]
+        for est_ind, estimator in enumerate(["classical", "ch", "dowd"]):
+            mape = other_outputs_plot[i][estimator + "_error_percent"].abs().mean()
 
-        ax[i, 1].annotate(
-            "MAPE = {:.2f}".format(mape),
-            xy=(1, 1),
-            xycoords="axes fraction",
-            xytext=(0.05, 0.9),
-            textcoords="axes fraction",
-            transform=ax[i, 1].transAxes,
-            bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
-        )
-
-        ax[i, ncols - 1].plot(
-            other_outputs_plot[i]["missing_prop"] * 100,
-            color="black",
-            label="% pairs missing",
-        )
-        ax[i, ncols - 1].semilogx()
-        ax[i, ncols - 1].set_ylim(0, 100)
-
-        ax2 = ax[i, ncols - 1].twinx()
-        ax2.tick_params(axis="y", colors="blue")
-        ax2.plot(
-            other_outputs_plot[i][estimator + "_error_percent"],
-            color="blue",
-            label="% error",
-        )
-
-        ax2.semilogx()
-        ax2.set_ylim(-100, 100)
-        ax2.axhline(0, color="blue", linestyle="--")
-        if i == 0:
-            ax2.annotate(
-                "% error",
+            ax[i, 1].annotate(
+                "MAPE = {:.2f}".format(mape),
                 xy=(1, 1),
                 xycoords="axes fraction",
-                xytext=(0.75, 0.9),
+                xytext=(0.05, pos_y[est_ind]),
                 textcoords="axes fraction",
-                transform=ax[i, 0].transAxes,
-                c="blue",
+                transform=ax[i, 1].transAxes,
+                color=colors[est_ind],
                 bbox=dict(
-                    facecolor="white", edgecolor="grey", boxstyle="round", alpha=0.7
+                    facecolor="white",
+                    edgecolor="white",
+                    boxstyle="round",
+                    # linestyle=":",
                 ),
             )
 
-        # Plot scatter plot and line plot for both log-scale and linear-scale
-        for j in range(ncols - 2):
-            j += 1
-
-            ax[i, j].plot(
-                good_output[input_ind]["lag"],
-                good_output[input_ind][estimator],
-                color="grey",
-                linewidth=2,
-            )
-            ax[i, j].plot(
-                other_outputs_plot[i]["lag"],
-                other_outputs_plot[i][estimator],
+            ax[i, ncols - 1].plot(
+                other_outputs_plot[i]["missing_prop"] * 100,
                 color="black",
-                linewidth=3,
+                label="% pairs missing",
             )
-            suffix = ""  # for the title
-            # Get lag vals
-            if (
-                "sq_diffs" in other_outputs_plot[i].columns
-                and len(good_input[input_ind]) < 3000
-            ):
-                other_lag_vals = get_lag_vals_list(other_outputs_plot[i])
-                ax[i, j].scatter(
-                    other_lag_vals["lag"],
-                    other_lag_vals["sq_diffs"],
-                    alpha=0.005,
-                    s=1,
-                )
-                suffix = " + squared diffs"
+            ax[i, ncols - 1].semilogx()
+            ax[i, ncols - 1].set_ylim(0, 100)
 
-            # Plot "confidence region" of +- x SEs
-            if estimator == "sosf":
-                x = 3
-                ax[i, j].fill_between(
-                    other_outputs_plot[i]["lag"],
-                    np.maximum(
-                        other_outputs_plot[i]["sosf"]
-                        - x * other_outputs_plot[i]["sosf_se"],
-                        0,
+            ax2 = ax[i, ncols - 1].twinx()
+            ax2.tick_params(axis="y", colors="C0")
+            ax2.plot(
+                other_outputs_plot[i][estimator + "_error_percent"],
+                color=colors[est_ind],
+                label="% error",
+                lw=0.8,
+            )
+
+            ax2.semilogx()
+            ax2.set_ylim(-100, 100)
+            ax2.axhline(0, color="C0", linestyle="--")
+            if i == 0:
+                ax2.annotate(
+                    "% error",
+                    xy=(1, 1),
+                    xycoords="axes fraction",
+                    xytext=(0.75, 0.9),
+                    textcoords="axes fraction",
+                    transform=ax[i, 0].transAxes,
+                    c="C0",
+                    bbox=dict(
+                        facecolor="white", edgecolor="grey", boxstyle="round", alpha=0.7
                     ),
-                    other_outputs_plot[i]["sosf"]
-                    + x * other_outputs_plot[i]["sosf_se"],
-                    color="lightgrey",
-                    alpha=0.6,
-                    label=f"$\pm$ {x} SE",
                 )
 
-            ax[i, j].set_ylim(1e-2, 1e1)
+            # Plot scatter plot and line plot for both log-scale and linear-scale
+            for j in range(ncols - 2):
+                j += 1
+
+                ax[i, j].plot(
+                    good_output[input_ind]["lag"],
+                    good_output[input_ind][estimator],
+                    color=colors[est_ind],
+                    alpha=0.3,
+                    linewidth=3.5,
+                    label=estimator,
+                )
+                ax[i, j].plot(
+                    other_outputs_plot[i]["lag"],
+                    other_outputs_plot[i][estimator],
+                    color=colors[est_ind],
+                    linewidth=0.8,
+                    # ls=":",
+                    # label=f": {estimator}",
+                )
+                suffix = ""  # for the title
+                # Get lag vals
+                if (
+                    "sq_diffs" in other_outputs_plot[i].columns
+                    and len(good_input[input_ind]) < 3000
+                ):
+                    other_lag_vals = get_lag_vals_list(other_outputs_plot[i])
+                    ax[i, j].scatter(
+                        other_lag_vals["lag"],
+                        other_lag_vals["sq_diffs"],
+                        alpha=0.005,
+                        s=1,
+                    )
+                    suffix = " + squared diffs"
+
+                # Plot "confidence region" of +- x SEs
+                # if estimator == "classical":
+                #     x = 3
+                #     ax[i, j].fill_between(
+                #         other_outputs_plot[i]["lag"],
+                #         np.maximum(
+                #             other_outputs_plot[i]["classical"]
+                #             - x * other_outputs_plot[i]["classical_se"],
+                #             0,
+                #         ),
+                #         other_outputs_plot[i]["classical"]
+                #         + x * other_outputs_plot[i]["classical_se"],
+                #         color="C0",
+                #         alpha=0.4,
+                #         label=f"$\pm$ {x} SE",
+                #     )
+
+                ax[i, j].set_ylim(1e-2, 1e1)
 
         if linear is True:
             ax[i, 2].semilogx()
@@ -293,26 +307,26 @@ def plot_sample(
 
 def plot_error_trend_line(
     other_outputs_df,
-    estimator="sosf",
+    estimator="classical",
     title="SF estimation error vs. lag and global sparsity",
 ):
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(8, 4), tight_layout=True)
     plt.title(title)
     # plt.plot(lag_error_mean_i, color="black", lw=3)
     plt.scatter(
         other_outputs_df["lag"],
         other_outputs_df[estimator + "_error_percent"],
         c=other_outputs_df["missing_prop_overall"],
-        s=0.2,
-        alpha=0.4,
-        cmap="viridis",
+        s=0.08,
+        alpha=0.6,
+        cmap="plasma",
     )
     median_error = other_outputs_df.groupby("Lag")[
         estimator + "_error_percent"
     ].median()
     mean_error = other_outputs_df.groupby("Lag")[estimator + "_error_percent"].mean()
     plt.plot(median_error, color="black", lw=2, label="Median")
-    plt.plot(mean_error, color="blue", lw=2, label="Mean")
+    plt.plot(mean_error, color="C0", lw=2, label="Mean")
 
     plt.annotate(
         "MAPE = {0:.2f}".format(
@@ -342,12 +356,12 @@ def plot_error_trend_scatter(
     bad_outputs_df, interp_outputs_df, title="Overall % error vs. sparsity"
 ):
     fig, ax = plt.subplots(figsize=(6, 3), tight_layout=True)
-    sfn_mape = bad_outputs_df.groupby("missing_prop_overall")["sosf_error_percent"].agg(
-        lambda x: np.mean(np.abs(x))
-    )
+    sfn_mape = bad_outputs_df.groupby("missing_prop_overall")[
+        "classical_error_percent"
+    ].agg(lambda x: np.mean(np.abs(x)))
 
     sfn_mape_i = interp_outputs_df.groupby("missing_prop_overall")[
-        "sosf_error_percent"
+        "classical_error_percent"
     ].agg(lambda x: np.mean(np.abs(x)))
     plt.scatter(sfn_mape.index, sfn_mape.values, c="C0", label="No handling", alpha=0.5)
     plt.scatter(
@@ -418,15 +432,15 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
             if len(x[(xidx == i) & (yidx == j)]) > 0:
                 # means[i, j] = np.mean(y[(xidx == i) & (yidx == j)])
                 lag_prop_mean = np.nanmean(
-                    inputs["sosf_error_percent"][(xidx == i) & (yidx == j)]
+                    inputs["classical_error_percent"][(xidx == i) & (yidx == j)]
                 )
                 means[i, j] = lag_prop_mean
 
                 # Calculate standard error for the lookup table too
                 lag_prop_std_err = np.nanstd(
-                    inputs["sosf_error_percent"][(xidx == i) & (yidx == j)]
+                    inputs["classical_error_percent"][(xidx == i) & (yidx == j)]
                 ) / np.sqrt(
-                    len(inputs["sosf_error_percent"][(xidx == i) & (yidx == j)])
+                    len(inputs["classical_error_percent"][(xidx == i) & (yidx == j)])
                 )
                 # Save values at midpoint of each bin
                 data["Lag"].append(0.5 * (xedges[i] + xedges[i + 1]))
@@ -445,11 +459,13 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
 
     x = inputs["lag"]
     y = inputs[missing_measure]
-    z = inputs["sosf"]
+    z = inputs["classical"]
 
     xedges = np.linspace(0, inputs.lag.max() + 1, num_bins + 1)  # Lags
     yedges = np.linspace(0, 1, num_bins + 1)  # Missing prop
-    zedges = np.linspace(inputs.sosf.min(), inputs.sosf.max(), num_bins + 1)  # Power
+    zedges = np.linspace(
+        inputs.classical.min(), inputs.classical.max(), num_bins + 1
+    )  # Power
 
     if log is True:
         xedges = (
@@ -458,7 +474,13 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
         xedges[-1] = inputs.lag.max() + 1
         zedges = np.logspace(-2, 1, num_bins + 1)  # ranges from 0.01 to 10
 
-    data = {"Lag": [], missing_measure: [], "sosf": [], "MPE": [], "MPE_std_err": []}
+    data = {
+        "Lag": [],
+        missing_measure: [],
+        "classical": [],
+        "MPE": [],
+        "MPE_std_err": [],
+    }
     # Calculate the mean value in each bin
     xidx = np.digitize(x, xedges) - 1  # correcting for annoying 1-indexing
     yidx = np.digitize(y, yedges) - 1  # as above
@@ -472,7 +494,7 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
                 if len(x[(xidx == i) & (yidx == j) & (zidx == k)]) > 0:
                     # means[i, j] = np.mean(y[(xidx == i) & (yidx == j;ppoll;k.; mn)])
                     lag_prop_mean = np.nanmedian(
-                        inputs["sosf_error_percent"][
+                        inputs["classical_error_percent"][
                             (xidx == i) & (yidx == j) & (zidx == k)
                         ]
                     )
@@ -480,19 +502,19 @@ def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
 
                     # Calculate standard error for the lookup table too
                     lag_prop_std_err = np.nanstd(
-                        inputs["sosf_error_percent"][
+                        inputs["classical_error_percent"][
                             (xidx == i) & (yidx == j) & (zidx == k)
                         ]
                     ) / np.sqrt(
                         len(
-                            inputs["sosf_error_percent"][
+                            inputs["classical_error_percent"][
                                 (xidx == i) & (yidx == j) & (zidx == k)
                             ]
                         )
                     )
                     data["Lag"].append(0.5 * (xedges[i] + xedges[i + 1]))
                     data[missing_measure].append(0.5 * (yedges[j] + yedges[j + 1]))
-                    data["sosf"].append(0.5 * (zedges[k] + zedges[k + 1]))
+                    data["classical"].append(0.5 * (zedges[k] + zedges[k + 1]))
                     data["MPE"].append(lag_prop_mean)
                     data["MPE_std_err"].append(lag_prop_std_err)
 
@@ -568,13 +590,13 @@ def compute_scaling(bad_output, var, heatmap_vals):
         ]
 
         if len(nearest_row) > 1:
-            print("More than one nearest bin found!")
+            # print("More than one nearest bin found!")
             result = nearest_row.head(1)
             MPE = result["MPE"].values[0]
             scaling = 1 / (1 + MPE / 100)
 
         elif len(nearest_row) == 0:
-            print("No nearest bin found for lag {}! Scaling set to 1".format(i))
+            # print("No nearest bin found for lag {}! Scaling set to 1".format(i))
             scaling = 1
             std_err = 0
         else:
@@ -582,11 +604,11 @@ def compute_scaling(bad_output, var, heatmap_vals):
             MPE = result["MPE"].values[0]
             scaling = 1 / (1 + MPE / 100)
             std_err = result["MPE_std_err"].values[0]
-            scaling_lower = 1 / (1 + (MPE + std_err) / 100)
-            scaling_upper = 1 / (1 + (MPE - std_err) / 100)
+            scaling_lower = 1 / (1 + (MPE + 2 * std_err) / 100)
+            scaling_upper = 1 / (1 + (MPE - 2 * std_err) / 100)
 
         bad_output.loc[i, "scaling"] = scaling
-        bad_output.loc[bad_output["sosf_error"] == 0, "scaling"] = (
+        bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
             1  # Catching 0 errors
         )
         bad_output.loc[i, "scaling_lower"] = scaling_lower
@@ -600,20 +622,20 @@ def compute_scaling(bad_output, var, heatmap_vals):
     # Remove the diff rows as no longer needed
     df.drop(columns=["lag_diff", "prop_diff"], inplace=True)
 
-    bad_output["sosf_corrected"] = bad_output["sosf"] * bad_output["scaling"]
-    bad_output["sosf_corrected_lower"] = (
-        bad_output["sosf"] * bad_output["scaling_lower"]
+    bad_output["classical_corrected"] = bad_output["classical"] * bad_output["scaling"]
+    bad_output["classical_corrected_lower"] = (
+        bad_output["classical"] * bad_output["scaling_lower"]
     )
-    bad_output["sosf_corrected_upper"] = (
-        bad_output["sosf"] * bad_output["scaling_upper"]
+    bad_output["classical_corrected_upper"] = (
+        bad_output["classical"] * bad_output["scaling_upper"]
     )
 
     # Smoothing potentially jumpy correction
     bad_output["scaling_smoothed"] = (
         bad_output["scaling"].rolling(window=20, min_periods=1).mean()
     )
-    bad_output["sosf_corrected_smoothed"] = (
-        bad_output["sosf"] * bad_output["scaling_smoothed"]
+    bad_output["classical_corrected_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_smoothed"]
     )
 
     return bad_output
@@ -627,17 +649,17 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
     for i, row in bad_output.iterrows():
         desired_prop = row[var]
         desired_lag = i[2]  # 3rd level of multi-index = lag
-        desired_sosf = row["sosf"]
+        desired_classical = row["classical"]
         # Calculate absolute differences between desired Lag and all Lag values in the DataFrame
         df["lag_diff"] = np.abs(df["Lag"] - desired_lag)
         df["prop_diff"] = np.abs(df[var] - desired_prop)
-        df["sosf_diff"] = np.abs(df["sosf"] - desired_sosf)
+        df["classical_diff"] = np.abs(df["classical"] - desired_classical)
 
         # Find the row with the minimum absolute difference
         nearest_row = df.loc[
             (df["lag_diff"] == np.min(df["lag_diff"]))
             & (df["prop_diff"] == np.min(df["prop_diff"]))
-            & (df["sosf_diff"] == np.min(df["sosf_diff"]))
+            & (df["classical_diff"] == np.min(df["classical_diff"]))
         ]
 
         # print("Desired lag: {}".format(desired_lag))
@@ -646,13 +668,13 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
         # print(nearest_row)
 
         if len(nearest_row) > 1:
-            print("More than one nearest bin found!")
+            # print("More than one nearest bin found!")
             result = nearest_row.head(1)
             MPE = result["MPE"].values[0]
             scaling = 1 / (1 + MPE / 100)
 
         elif len(nearest_row) == 0:
-            print("No nearest bin found for lag {}! Scaling set to 1".format(i))
+            # print("No nearest bin found for lag {}! Scaling set to 1".format(i))
             scaling = 1
         else:
             result = nearest_row.head(1)
@@ -660,20 +682,22 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
             scaling = 1 / (1 + MPE / 100)
 
         bad_output.loc[i, "scaling"] = scaling
-        bad_output.loc[bad_output["sosf_error"] == 0, "scaling"] = (
+        bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
             1  # Catching 0 errors
         )
 
     # Remove the diff rows as no longer needed
-    df.drop(columns=["lag_diff", "prop_diff", "sosf_diff"], inplace=True)
+    df.drop(columns=["lag_diff", "prop_diff", "classical_diff"], inplace=True)
 
-    bad_output["sosf_corrected_3d"] = bad_output["sosf"] * bad_output["scaling"]
+    bad_output["classical_corrected_3d"] = (
+        bad_output["classical"] * bad_output["scaling"]
+    )
     # Smoothing potentially jumpy correction
     bad_output["scaling_smoothed"] = (
         bad_output["scaling"].rolling(window=20, min_periods=1).mean()
     )
-    bad_output["sosf_corrected_smoothed"] = (
-        bad_output["sosf"] * bad_output["scaling_smoothed"]
+    bad_output["classical_corrected_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_smoothed"]
     )
 
     return bad_output

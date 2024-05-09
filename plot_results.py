@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import utils as utils  # copied directly from Reynolds project, normalize() added
 import sf_funcs as sf
 import pickle
+from sklearn.model_selection import train_test_split
 
 # Because Rāpoi can't handle latex apparently
 plt.rcParams.update(
@@ -12,7 +13,7 @@ plt.rcParams.update(
         "text.usetex": False,
         "mathtext.fontset": "stix",  # Set the font to use for math
         "font.family": "serif",  # Set the default font family
-        "font.size": 12,
+        "font.size": 10,
     }
 )
 
@@ -23,8 +24,8 @@ input_path = "data/processed/"
 save_dir = "plots/plots_local/"
 missing_measure = "missing_prop"
 n_bins = 15
-input_ind_list = [0, 20, 40]
-n = 3  # Number of version of each interval to plot
+n_ints_to_plot = 2
+n_versions_to_plot = 2  # Number of version of each interval to plot
 
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
@@ -54,128 +55,144 @@ print(
     f"... = {len(all_interp_outputs_list[0])} versions of {len(all_interp_outputs_list)} inputs"
 )
 
+# Perform random train-test split
+
+(
+    good_inputs_train,
+    good_inputs_test,
+    good_outputs_train,
+    good_outputs_test,
+    bad_inputs_train,
+    bad_inputs_test,
+    bad_outputs_train,
+    bad_outputs_test,
+    interp_inputs_train,
+    interp_inputs_test,
+    interp_outputs_train,
+    interp_outputs_test,
+) = train_test_split(
+    good_inputs_list,
+    good_outputs_list,
+    all_bad_inputs_list,
+    all_bad_outputs_list,
+    all_interp_inputs_list,
+    all_interp_outputs_list,
+    test_size=0.1,
+    random_state=42,
+)
+
+times_to_gap = len(bad_inputs_train[0])
+
+print(
+    f"Number of training interval: {len(good_inputs_train)} x {times_to_gap} = {len(good_inputs_train)*len(bad_inputs_train[0])}"
+)
+print(
+    f"Number of test intervals: {len(good_inputs_test)} x {times_to_gap} = {len(good_inputs_test)*len(bad_inputs_test[0])}"
+)
+
 
 print("Now plotting figures.")
 # Check results, for a given clean input
-for input_ind in input_ind_list:
-    for estimator in ["sosf", "ch", "dowd"]:
-        sf.plot_sample(
-            good_inputs_list,
-            good_outputs_list,
-            all_bad_inputs_list,
-            all_bad_outputs_list,
-            input_ind,
-            n,
-            False,
-            estimator,
-            f"SF estimation subject to missing data: naive, {estimator}",
-        )
-        plt.savefig(save_dir + f"psp_missing_effect_{input_ind}_naive_{estimator}.png")
-        plt.clf()
+for input_ind in range(n_ints_to_plot):
+    sf.plot_sample(
+        good_inputs_test,
+        good_outputs_test,
+        bad_inputs_test,
+        bad_outputs_test,
+        input_ind,
+        n_versions_to_plot,
+        False,
+        "SF estimation subject to missing data: naive",
+    )
+    plt.savefig(save_dir + f"sf_i_{input_ind}_naive.png")
+    plt.clf()
 
-        sf.plot_sample(
-            good_inputs_list,
-            good_outputs_list,
-            all_interp_inputs_list,
-            all_interp_outputs_list,
-            input_ind,
-            n,
-            False,
-            estimator,
-            f"SF estimation subject to missing data: linear interpolation, {estimator}",
-        )
-        plt.savefig(save_dir + f"psp_missing_effect_{input_ind}_lint_{estimator}.png")
-        plt.clf()
-
-    for estimator in ["sosf", "ch", "dowd"]:
-        sf.plot_sample(
-            good_inputs_list,
-            good_outputs_list,
-            all_bad_inputs_list,
-            all_bad_outputs_list,
-            input_ind,
-            n,
-            False,
-            estimator,
-            f"SF estimation subject to missing data: naive, {estimator}",
-        )
-        plt.savefig(save_dir + f"psp_missing_effect_{input_ind}_naive_{estimator}.png")
-        plt.clf()
-
-        sf.plot_sample(
-            good_inputs_list,
-            good_outputs_list,
-            all_interp_inputs_list,
-            all_interp_outputs_list,
-            input_ind,
-            n,
-            False,
-            estimator,
-            f"SF estimation subject to missing data: linear interpolation, {estimator}",
-        )
-        plt.savefig(save_dir + f"psp_missing_effect_{input_ind}_lint_{estimator}.png")
-        plt.clf()
+    sf.plot_sample(
+        good_inputs_test,
+        good_outputs_test,
+        interp_inputs_test,
+        interp_outputs_test,
+        input_ind,
+        n_versions_to_plot,
+        False,
+        "SF estimation subject to missing data: linear interpolation",
+    )
+    plt.savefig(save_dir + f"sf_i_{input_ind}_lint.png")
+    plt.clf()
 
 
 # Do holistic analysis of errors
 
+
 # Concatenate the list of lists of dataframes to a single dataframe for error analysis
-bad_outputs_df = pd.concat(
-    [pd.concat(lst, keys=range(len(lst))) for lst in all_bad_outputs_list],
-    keys=range(len(all_bad_outputs_list)),
-)
+def concat_dfs(lst_of_list_of_dfs):
+    merged_df = pd.concat(
+        [pd.concat(lst, keys=range(len(lst))) for lst in lst_of_list_of_dfs],
+        keys=range(len(lst_of_list_of_dfs)),
+    )
+    # Renaming MultiIndex levels
+    merged_df.index.names = ["Original interval", "Interval version", "Lag"]
+    return merged_df
 
-# Renaming MultiIndex levels
-bad_outputs_df.index.names = ["Original interval", "Interval version", "Lag"]
 
-interp_outputs_df = pd.concat(
-    [pd.concat(lst, keys=range(len(lst))) for lst in all_interp_outputs_list],
-    keys=range(len(all_interp_outputs_list)),
-)
-
-# Renaming MultiIndex levels
-interp_outputs_df.index.names = ["Original interval", "Interval version", "Lag"]
+bad_outputs_train_df = concat_dfs(bad_outputs_train)
+interp_outputs_train_df = concat_dfs(interp_outputs_train)
+bad_outputs_test_df = concat_dfs(bad_outputs_test)
+interp_outputs_test_df = concat_dfs(interp_outputs_test)
 
 # View trends as fn of OVERALL missing amount
-for estimator in ["sosf", "ch", "dowd"]:
+for estimator in ["classical", "ch", "dowd"]:
+    print(
+        "Mean MAPE of uncorrected bad SFs in test set ({0}) = {1:.2f}".format(
+            estimator, bad_outputs_test_df[f"{estimator}_error_percent"].abs().mean()
+        )
+    )
+    print(
+        "Mean MAPE of uncorrected interpolated SFs in test set ({0}) = {1:.2f}".format(
+            estimator, interp_outputs_test_df[f"{estimator}_error_percent"].abs().mean()
+        )
+    )
+
     sf.plot_error_trend_line(
-        other_outputs_df=bad_outputs_df,
+        other_outputs_df=bad_outputs_train_df,
         estimator=estimator,
         title=f"SF estimation ({estimator}, naive) error vs. lag and global sparsity",
     )
-    plt.savefig(save_dir + f"psp_missing_effect_holistic_naive_{estimator}.png")
+    plt.savefig(save_dir + f"error_lag_{estimator}_naive.png")
     plt.clf()
 
     sf.plot_error_trend_line(
-        other_outputs_df=interp_outputs_df,
-        estimator="sosf",
+        other_outputs_df=interp_outputs_train_df,
+        estimator=estimator,
         title=f"SF estimation ({estimator}, lint) error vs. lag and global sparsity",
     )
-    plt.savefig(save_dir + f"psp_missing_effect_holistic_lint_{estimator}.png")
+    plt.savefig(save_dir + f"error_lag_{estimator}_lint.png")
     plt.clf()
 
 
 def plot_average_errors(df):
     fig, ax = plt.subplots(figsize=(6, 3))
-    stats = df.groupby("Lag")["sosf_error_percent"].describe()
+    stats = df.groupby("Lag")["classical_error_percent"].describe()
     plt.plot(stats["mean"], lw=3, label="Mean % error")
     plt.plot(stats["50%"], lw=3, label="Median % error")
     plt.semilogx()
     plt.legend()
 
 
-plot_average_errors(bad_outputs_df)
+plot_average_errors(interp_outputs_train_df)
 plt.title("Average errors by lag in naive SFs")
-plt.savefig(save_dir + "psp_missing_effect_holistic_sosf_avg.png")
+plt.savefig(save_dir + "error_lag_classical_avg.png")
 plt.clf()
 
-sf.plot_error_trend_scatter(bad_outputs_df, interp_outputs_df)
-plt.savefig(save_dir + "psp_missing_effect_holistic_scatter.png")
+sf.plot_error_trend_scatter(bad_outputs_train_df, interp_outputs_train_df)
+plt.savefig(save_dir + "error_lag_classical_avg.png")
 plt.clf()
 
 # Check any cases of particularly large errors in lint dataset
-print("\nLargest errors in LINT SFs:\n")
-print(interp_outputs_df.sort_values("sosf_error_percent", ascending=False).head(5))
+# print("\nLargest errors in LINT SFs:\n")
+# print(
+#     interp_outputs_train_df.sort_values("classical_error_percent", ascending=False).head(5)
+# )
 
 # Create empirical correction factor using heatmap of errors
 
@@ -185,7 +202,9 @@ print(interp_outputs_df.sort_values("sosf_error_percent", ascending=False).head(
 for n_bins in [15, 20, 25]:
     # First with no interpolation
     heatmap_bin_vals_log_bad, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
-        sf.create_heatmap_lookup(bad_outputs_df, missing_measure, n_bins, log=True)
+        sf.create_heatmap_lookup(
+            bad_outputs_train_df, missing_measure, n_bins, log=True
+        )
     )
 
     fig, ax = plt.subplots(figsize=(7, 5))
@@ -202,19 +221,19 @@ for n_bins in [15, 20, 25]:
     plt.title("Distribution of missing proportion and lag (NO LINT)")
     ax.set_facecolor("black")
     ax.set_xscale("log")
-    plt.savefig(save_dir + f"psp_correction_heatmap_{n_bins}_bins_naive.png")
+    plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d_naive.png")
     plt.clf()
 
     # Now with linear interpolation
-    heatmap_bin_vals_log, heatmap_bin_edges_log, lookup_table_log = (
-        sf.create_heatmap_lookup(interp_outputs_df, missing_measure, n_bins, log=True)
+    heatmap_bin_vals, heatmap_bin_edges, lookup_table = sf.create_heatmap_lookup(
+        interp_outputs_train_df, missing_measure, n_bins, log=True
     )
 
     fig, ax = plt.subplots(figsize=(7, 5))
     plt.pcolormesh(
-        heatmap_bin_edges_log[0],
-        heatmap_bin_edges_log[1],
-        heatmap_bin_vals_log.T,
+        heatmap_bin_edges[0],
+        heatmap_bin_edges[1],
+        heatmap_bin_vals.T,
         cmap="bwr",
     )
     plt.colorbar(label="MPE")
@@ -224,78 +243,102 @@ for n_bins in [15, 20, 25]:
     plt.title("Distribution of missing proportion and lag")
     ax.set_facecolor("black")
     ax.set_xscale("log")
-    plt.savefig(save_dir + f"psp_correction_heatmap_{n_bins}_bins.png")
+    plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d.png")
     plt.clf()
 
     fig, ax = plt.subplots(figsize=(7, 5))
     hb = ax.hist2d(
-        interp_outputs_df["lag"],
-        interp_outputs_df[missing_measure],
+        interp_outputs_train_df["lag"],
+        interp_outputs_train_df[missing_measure],
         bins=n_bins,
         cmap="copper",
-        range=[[0, interp_outputs_df.lag.max()], [0, 1]],
+        range=[[0, interp_outputs_train_df.lag.max()], [0, 1]],
     )
     plt.colorbar(hb[3], ax=ax, label="Counts")
     hb[3].set_clim(0, hb[0].max())
     plt.xlabel("Lag")
     plt.ylabel("Missing proportion")
     plt.title("Distribution of missing proportion and lag (linear bins)")
-    plt.savefig(save_dir + "psp_heatmap_sample_size.png")
+    plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d_counts.png")
     plt.clf()
 
     # Now in 3D
     # (logarithmic spacing for lags and power)
     heatmap_bin_vals_3d, heatmap_bin_edges_3d, lookup_table_3d = (
-        sf.create_heatmap_lookup_3D(interp_outputs_df, missing_measure, n_bins, True)
+        sf.create_heatmap_lookup_3D(
+            interp_outputs_train_df, missing_measure, n_bins, True
+        )
     )
 
-    for input in input_ind_list:
-        fig, axs = plt.subplots(n, 2, figsize=(10, 4 * n))
+    # Apply 2D and 3D scaling to test set, report avg errors
 
-        # Before plotting, sort the n outputs by missing proportion
-        other_outputs_plot = all_interp_outputs_list[input_ind][:n]
-        sparsities = [df["missing_prop_overall"].values[0] for df in other_outputs_plot]
-        sorted_lists = zip(*sorted(zip(sparsities, other_outputs_plot)))
-        sparsities_ordered, other_outputs_plot = sorted_lists
+    test_set_corrected = sf.compute_scaling(
+        interp_outputs_test_df, missing_measure, lookup_table
+    )
 
-        for i, df_to_plot in enumerate(other_outputs_plot):
-            print(f"\n2D: Correcting interval {i}:")
-            sf_corrected = sf.compute_scaling(
-                df_to_plot,
-                missing_measure,
-                lookup_table_log,
-            )
-            print(f"\n3D: Correcting interval {i}:")
-            sf_corrected_3d = sf.compute_scaling_3d(
-                df_to_plot,
-                missing_measure,
-                lookup_table_3d,
-            )
+    test_set_corrected_3d = sf.compute_scaling_3d(
+        interp_outputs_test_df, missing_measure, lookup_table_3d
+    )
 
-            sf_corrected["error_corrected"] = (
-                sf_corrected["sosf_corrected"] - good_outputs_list[input_ind]["sosf"]
-            )
-            sf_corrected["error_percent_corrected"] = (
-                sf_corrected["error_corrected"]
-                / good_outputs_list[input_ind]["sosf"]
-                * 100
-            )
-            mape_bad = sf_corrected["sosf_error_percent"].abs().mean()
-            mape_corrected = sf_corrected["error_percent_corrected"].abs().mean()
+    # Calculate corrected test set error
+    error_percents_2d = []
+    error_percents_3d = []
 
-            sf_corrected_3d["error_corrected_3d"] = (
-                sf_corrected_3d["sosf_corrected_3d"]
-                - good_outputs_list[input_ind]["sosf"]
+    for i, df in enumerate(good_outputs_test):
+        for j in range(times_to_gap):
+            # Calculate difference
+            error_2d = (
+                test_set_corrected.loc[(i, j), "classical_corrected"] - df["classical"]
             )
-            sf_corrected_3d["error_percent_corrected_3d"] = (
-                sf_corrected_3d["error_corrected_3d"]
-                / good_outputs_list[input_ind]["sosf"]
-                * 100
+            error_percent_2d = error_2d / df["classical"] * 100
+            error_percents_2d.append(error_percent_2d)
+
+            error_3d = (
+                test_set_corrected_3d.loc[(i, j), "classical_corrected_3d"]
+                - df["classical"]
+            )
+            error_percent_3d = error_3d / df["classical"] * 100
+            error_percents_3d.append(error_percent_3d)
+
+    print(
+        "Mean MAPE of corrected interpolated intervals test set (classical, 2D, {0} bins) = {1:.2f}".format(
+            n_bins, np.mean(np.abs(error_percents_2d))
+        )
+    )
+    print(
+        "Mean MAPE of corrected interpolated intervals test set (classical, 3D, {0} bins) = {1:.2f}".format(
+            n_bins, np.mean(np.abs(error_percents_3d))
+        )
+    )
+
+    for input_ind in range(n_ints_to_plot):
+        fig, axs = plt.subplots(
+            n_versions_to_plot, 2, figsize=(10, 4 * n_versions_to_plot)
+        )
+
+        # Get the relevent indices in order of sparsity for better plot aesthetics
+        versions_ordered_sparsity = (
+            interp_outputs_test_df.loc[input_ind, : n_versions_to_plot - 1, :]
+            .sort_values("missing_prop_overall")
+            .index.get_level_values(1)
+            .unique()
+            .values
+        )
+
+        for i, int_version in enumerate(versions_ordered_sparsity):
+            mape_bad = (
+                interp_outputs_test_df.loc[input_ind, int_version][
+                    "classical_error_percent"
+                ]
+                .abs()
+                .mean()
+            )
+            mape_corrected = (
+                error_percents_2d[input_ind * times_to_gap + int_version].abs().mean()
             )
             mape_corrected_3d = (
-                sf_corrected_3d["error_percent_corrected_3d"].abs().mean()
+                error_percents_3d[input_ind * times_to_gap + int_version].abs().mean()
             )
-            # mape_corrected_sm = sf_corrected["error_percent_corrected_sm"].abs().mean()
 
             axs[i, 1].annotate(
                 "MAPE = {:.2f}".format(mape_bad),
@@ -304,7 +347,8 @@ for n_bins in [15, 20, 25]:
                 xytext=(0.05, 0.9),
                 textcoords="axes fraction",
                 transform=axs[i, 1].transAxes,
-                bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
+                c="black",
+                bbox=dict(facecolor="white", edgecolor="white", boxstyle="round"),
             )
 
             axs[i, 1].annotate(
@@ -315,7 +359,7 @@ for n_bins in [15, 20, 25]:
                 textcoords="axes fraction",
                 transform=axs[i, 1].transAxes,
                 c="blue",
-                bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
+                bbox=dict(facecolor="white", edgecolor="white", boxstyle="round"),
             )
 
             axs[i, 1].annotate(
@@ -326,37 +370,58 @@ for n_bins in [15, 20, 25]:
                 textcoords="axes fraction",
                 transform=axs[i, 1].transAxes,
                 c="purple",
-                bbox=dict(facecolor="white", edgecolor="black", boxstyle="round"),
+                bbox=dict(facecolor="white", edgecolor="white", boxstyle="round"),
             )
 
             axs[i, 1].plot(
-                good_outputs_list[input_ind]["sosf"], color="grey", label="True"
+                good_outputs_test[input_ind]["classical"],
+                color="black",
+                label="True (classical)",
+                lw=3,
+                alpha=0.5,
             )
-            axs[i, 1].plot(df_to_plot["sosf"], color="black", label="Interp.")
+            axs[i, 1].plot(
+                interp_outputs_test_df.loc[input_ind, int_version]["classical"],
+                color="black",
+                lw=1,
+                label="Interp. (classical)",
+            )
             # axs[i, 1].plot(
-            #     sf_corrected["sosf"] * sf_corrected["scaling"], c="blue", label="Corrected Bad"
+            #     sf_corrected["classical"] * sf_corrected["scaling"], c="blue", label="Corrected Bad"
             # )
             axs[i, 1].plot(
-                sf_corrected["sosf_corrected"],
+                interp_outputs_test_df.loc[input_ind, int_version][
+                    "classical_corrected"
+                ],
                 c="blue",
-                label="Corrected Interp. $\pm$SE",
+                lw=1.2,
+                ls=":",
+                label="Interp. corr. (2D) $\pm$2SE",
             )
             axs[i, 1].fill_between(
-                sf_corrected["lag"],
-                sf_corrected["sosf_corrected_lower"],
-                sf_corrected["sosf_corrected_upper"],
+                interp_outputs_test_df.loc[input_ind, int_version]["lag"],
+                interp_outputs_test_df.loc[input_ind, int_version][
+                    "classical_corrected_lower"
+                ],
+                interp_outputs_test_df.loc[input_ind, int_version][
+                    "classical_corrected_upper"
+                ],
                 color="blue",
                 alpha=0.2,
             )
             #    axs[i, 1].plot(
-            #        sf_corrected["sosf_corrected_smoothed"],
+            #        sf_corrected["classical_corrected_smoothed"],
             #        c="orange",
             #        label="Corrected Bad Smoothed",
             #    )
             axs[i, 1].plot(
-                sf_corrected_3d["sosf_corrected_3d"],
+                interp_outputs_test_df.loc[input_ind, int_version][
+                    "classical_corrected_3d"
+                ],
                 c="purple",
-                label="Corrected Interp. (3D)",
+                ls=":",
+                lw=1.2,
+                label="Interp. corrected. (3D)",
             )
             axs[i, 1].semilogx()
             axs[i, 1].semilogy()
@@ -365,9 +430,9 @@ for n_bins in [15, 20, 25]:
 
             # if log is True:
             c = axs[i, 0].pcolormesh(
-                heatmap_bin_edges_log[0],
-                heatmap_bin_edges_log[1] * 100,  # convert to % Missing
-                heatmap_bin_vals_log.T,
+                heatmap_bin_edges[0],
+                heatmap_bin_edges[1] * 100,  # convert to % Missing
+                heatmap_bin_vals.T,
                 cmap="bwr",
             )
             # fig.colorbar(c, ax=axs[i, 0], label="MPE")
@@ -375,8 +440,9 @@ for n_bins in [15, 20, 25]:
             c.set_facecolor("black")
             # axs[i, 0].set_xlabel("Lag")
             axs[i, 0].plot(
-                df_to_plot["lag"],
-                df_to_plot[missing_measure] * 100,
+                interp_outputs_test_df.loc[input_ind, int_version]["lag"],
+                interp_outputs_test_df.loc[input_ind, int_version][missing_measure]
+                * 100,
                 c="black",
             )
 
@@ -393,9 +459,15 @@ for n_bins in [15, 20, 25]:
             # )
         axs[0, 1].set_title("Applying correction factor")
         axs[0, 0].set_title("Extracting correction factor")
-        axs[n - 1, 0].set_xlabel("Lag ($\\tau$)")
-        axs[n - 1, 1].set_xlabel("Lag ($\\tau$)")
-        plt.savefig(save_dir + f"psp_corrected_{input_ind}_int_{n_bins}_bins.png")
+        axs[n_versions_to_plot - 1, 0].set_xlabel("Lag ($\\tau$)")
+        axs[n_versions_to_plot - 1, 1].set_xlabel("Lag ($\\tau$)")
+        axs[0, 0].set_ylabel("% pairs missing")
+        fig.suptitle(
+            "Applying correction factor to interpolated SFs in test set", size=16
+        )
+        plt.savefig(
+            save_dir + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d.png"
+        )
         plt.clf()
 
 # Plotting 3D heatmaps
@@ -425,7 +497,7 @@ for i in range(n_bins):
     if i > 0:
         ax[i].set_yticklabels([])
         ax[i].set_ylabel("")
-plt.savefig(save_dir + "psp_heatmap_3d_power.png")
+plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_power.png")
 plt.clf()
 
 fig, ax = plt.subplots(1, n_bins, figsize=(n_bins * 3, 3), tight_layout=True)
@@ -440,8 +512,8 @@ for i in range(n_bins):
     )
     # plt.colorbar(label="MPE")
     c.set_clim(-100, 100)
-    plt.xlabel("Missing prop")
-    plt.ylabel("Power")
+    ax[i].set_xlabel("Missing prop")
+    ax[i].set_ylabel("Power")
     plt.title("Distribution of missing proportion and lag")
     ax[i].set_facecolor("black")
     ax[i].semilogy()
@@ -453,7 +525,7 @@ for i in range(n_bins):
     if i > 0:
         ax[i].set_yticklabels([])
         ax[i].set_ylabel("")
-plt.savefig(save_dir + "psp_heatmap_3d_lag.png")
+plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_lag.png")
 plt.clf()
 
 fig, ax = plt.subplots(1, n_bins, figsize=(n_bins * 3, 3), tight_layout=True)
@@ -483,5 +555,5 @@ for i in range(n_bins):
     if i > 0:
         ax[i].set_yticklabels([])
         ax[i].set_ylabel("")
-plt.savefig(save_dir + "psp_heatmap_3d_missing.png")
+plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_missing.png")
 plt.clf()
