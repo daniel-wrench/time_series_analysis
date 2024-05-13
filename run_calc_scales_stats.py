@@ -3,10 +3,36 @@
 import pandas as pd
 from calc_scales_stats import calc_scales_stats
 import pickle
+from Kea.Kea.simulator import fbm as fbm
+import numpy as np
 
 timestamp = "20160101"
 
 mag_int_hr = pd.read_pickle("data/processed/wind/mfi/" + timestamp + ".pkl")
+
+mag_int_hr.head()
+
+# LET'S CREATE AN FBM FIELD WITH THE SAME FREQs AS THIS WIND INTERVAL
+
+N = 10000
+D = 1
+L = N
+dk = 2.0 * np.pi / L
+BREAK = 100.0 * dk
+
+# x = fbm.create_fbm(grid_dims=(1000,), phys_dims=(1000,), alphas=(-1,-5/3), breaks=(100,), )
+x_periodic = fbm.create_fbm(
+    grid_dims=[4 * N for _ in range(D)],
+    phys_dims=[L for _ in range(D)],
+    alphas=(-1.0, -5.0 / 3.0),
+    gfunc="smooth_pow",
+    func_kwargs={"breaks": (BREAK,), "delta": 0.25},
+)
+
+dataset_name = "Multi-fractal\ fBm"
+fbm_field = pd.Series(
+    x_periodic[:N], name="fbm", index=pd.date_range("2016-01-01", periods=N, freq="S")
+)
 
 # Frequency bounds are taken from Wang et al. (2018, JGR)
 mag_params = {
@@ -18,6 +44,20 @@ mag_params = {
     "nlags_lr": 2000,
     "nlags_hr": 100,
     "dt_lr": "5S",
+    # LR version is used for calculation SFN and ACF; original HR for spectrum and taylor scale
+    "tau_min": 10,
+    "tau_max": 50,
+}
+
+fbm_params = {
+    "spectrum": True,
+    "f_min_kinetic": 0.02,
+    "f_max_kinetic": 0.2,
+    "f_min_inertial": 0.001,
+    "f_max_inertial": 0.1,
+    "nlags_lr": 2000,
+    "nlags_hr": 100,
+    "dt_lr": "1S",
     # LR version is used for calculation SFN and ACF; original HR for spectrum and taylor scale
     "tau_min": 10,
     "tau_max": 50,
@@ -46,6 +86,14 @@ flr, flt = calc_scales_stats([mag_int_hr.Bx], "Bx", mag_params)
 # # Save dictionary for later plotting
 flr.to_pickle("data/processed/wind/" + "Bx_raw_" + timestamp + ".pkl")
 with open("data/processed/wind/" + "Bx_turb_" + timestamp + ".pkl", "wb") as file:
+    pickle.dump(flt, file)
+
+## FBM FIELD: SINGLE COMPONENT
+flr, flt = calc_scales_stats([fbm_field], "fbm", fbm_params)
+
+# # Save dictionary for later plotting
+flr.to_pickle("data/processed/wind/" + "fbm_raw" + ".pkl")
+with open("data/processed/wind/" + "fbm_turb" + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
 
