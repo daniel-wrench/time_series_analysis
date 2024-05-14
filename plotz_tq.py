@@ -19,9 +19,20 @@ from matplotlib.backends.backend_pdf import PdfPages
 import TurbAn.Analysis.Simulations.AnalysisFunctions as af
 # have commented out import in TurbAn\Analysis\Simulations\AnalysisFunctions.py and TurbAn\Analysis\TimeSeries\Time_Series_Analysis.py
 
+plt.rcParams.update(
+    {
+        "text.usetex": True,
+        "mathtext.fontset": "stix",  # Set the font to use for math
+        "font.family": "serif",  # Set the default font family
+        "font.size": 11,
+    }
+)
+
 
 def plotz(tfiles, rfiles, name, var_name, unit, spacecraft, plotpoints, timestamp):
-    pdf = PdfPages("plots/stats_" + spacecraft + name + "_" + timestamp + ".pdf")
+    pdf = PdfPages(
+        "plots/" + spacecraft + "_" + name + "_" + timestamp + "_stats_ts.pdf"
+    )
     lags_to_examine = [5, 50, 500]
     for flt, flr in zip(tfiles, rfiles):
         if not os.path.exists(flt) or not os.path.exists(flr):
@@ -150,10 +161,10 @@ def plotz(tfiles, rfiles, name, var_name, unit, spacecraft, plotpoints, timestam
             10 * np.max(d[name]["power_periodogram"]),
         )
         af.pltpwrl(
-            1e-3,
-            d[name]["p_smooth"][5] * 80.0,
-            xi=1e-2,
-            xf=1,
+            x0=d[name]["f_periodogram"][-10],
+            y0=d[name]["p_smooth"][-50] * 20.0,
+            xi=d[name]["f_periodogram"][-100] / 100,
+            xf=d[name]["f_periodogram"][-100],
             alpha=-5.0 / 3,
             label="-5/3",
             ax=ax2,
@@ -226,19 +237,18 @@ def plotz(tfiles, rfiles, name, var_name, unit, spacecraft, plotpoints, timestam
 
         # Plot the structure function sfn
         ax4.plot(
-            d[name]["times"][: len(d[name]["sfn"])],
+            d[name]["times"][1 : len(d[name]["sfn"]) + 1],  # making sure these match up
             d[name]["sfn"].loc[:, "2"],
             label="S$^{(2)}$",
         )
         ax4.set_xscale("log")
         ax4.set_yscale("log")
-        yyy = d[name]["sfn"].loc[:, "2"].values[58]
         af.pltpwrl(
-            50,
-            yyy * 2.0,
-            xi=1,
-            xf=500,
-            alpha=2.0 / 3,
+            x0=d[name]["times"][5],
+            y0=d[name]["sfn"].loc[:, "2"].values[1] * 10.0,
+            xi=d[name]["times"][5],
+            xf=d[name]["times"][5] * 100,
+            alpha=2 / 3,
             label="2/3",
             ax=ax4,
             color="purple",
@@ -247,6 +257,7 @@ def plotz(tfiles, rfiles, name, var_name, unit, spacecraft, plotpoints, timestam
         # yy2=d[name]['sfn'].iloc[:,2].values[1]*1.1
         # ax4.text(3,yy2,r'S$^{{(2)}}(dt_{{max}})$={0:.03e}'.format(d[name]['sfn'][0,-1]))
         ax4.set_xlabel("$\Delta$t (s)")
+        # ax4.set_xlim(times[0] * 0.9, times[-1] * 1.1)
         # ax4.legend()
 
         # Plot the kurtosis sdk (not calculated component-wise currently)
