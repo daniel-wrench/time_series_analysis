@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import sf_funcs as sf
+import random as random
 from matplotlib.patches import Rectangle
 
 
@@ -29,6 +30,8 @@ plt.rcParams.update(
     }
 )
 
+##################################
+
 # from fbm import FBM
 
 # Two ways of creating fBm
@@ -46,52 +49,78 @@ L = N
 dk = 2.0 * np.pi / L
 BREAK = 100.0 * dk
 
+random.seed(42)
 # x = fbm.create_fbm(grid_dims=(1000,), phys_dims=(1000,), alphas=(-1,-5/3), breaks=(100,), )
-x_periodic = fbm.create_fbm(
-    grid_dims=[4 * N for _ in range(D)],
-    phys_dims=[L for _ in range(D)],
-    alphas=(-1.0, -5.0 / 3.0),
-    gfunc="smooth_pow",
-    func_kwargs={"breaks": (BREAK,), "delta": 0.25},
-)
+# x_periodic = fbm.create_fbm(
+#     grid_dims=[4 * N for _ in range(D)],
+#     phys_dims=[L for _ in range(D)],
+#     alphas=(-1.0, -5.0 / 3.0),
+#     gfunc="smooth_pow",
+#     func_kwargs={"breaks": (BREAK,), "delta": 0.25},
+# )
 
-dataset_name = "Multi-fractal\ fBm"
-x = x_periodic[:N]
+# timestamp = "20160101"
+# fbm_field = pd.Series(
+#     x_periodic[:N], name="fbm", index=pd.date_range(timestamp, periods=N, freq="S")
+# )
+
+# fbm_field.to_pickle("data/processed/wind/fbm_field_" + timestamp + ".pkl")
+
+##################################
 
 # dataset_name = "PSP\ solar\ wind"
 
-# df_raw_full = pd.read_pickle("data/processed/psp/psp_fld_l2_mag_rtn_201811.pkl")
-# df_raw = df_raw_full["B_R"]
-# df_raw.head()
-# x = df_raw.values[:1000]
 
-# Remove slashes from dataset name for saving
-dataset_name_save = dataset_name.replace("\\", "")
+##################################
+timestamp = "20160101"
 
-plt.plot(x_periodic, label="Periodic fBM field")
-plt.plot(x, label="$\\mathbf{%s}$" % dataset_name)
-plt.legend()
-# plt.savefig(f"plots/{dataset_name_save}_time_series.png")
-plt.show()
+fbm_field = pd.read_pickle("data/processed/wind/fbm_field_" + timestamp + ".pkl")
+x = fbm_field
+dataset_name = "Multi-fractal\ fBm"
+dataset_brief = "fbm"
 
-# Compute the spectra
-for data in [x_periodic, x]:
-    # for data in [x]:
-    spectrum = ps.modal_spectrum(ar1=data, phys_dims=[L for _ in range(D)])
-    plt.plot(spectrum[0][0], spectrum[1])
-# plt.plot(np.arange(len(x_subset)), np.arange(len(x_subset)) ** (-5/3), color="black", linestyle="--")
-plt.axvline(BREAK, color="black", linestyle="--", label="Break frequency")
-plt.semilogx()
-plt.semilogy()
-plt.xlim(spectrum[0][0].min(), spectrum[0][0].max())
-plt.ylim(1e-5, 1e3)
-plt.legend()
-plt.title("$\\mathbf{%s}$: Power spectral density" % dataset_name)
-# plt.savefig(f"plots/{dataset_name_save}_psd.png")
-plt.show()
+# wind_raw = pd.read_pickle("data/processed/wind/mfi/" + timestamp + ".pkl")
+# wind = wind_raw["Bx"].values[10000:20000]
+# x = wind
+# dataset_name = "Solar\ wind\ from\ Wind\ spacecraft"
+# dataset_brief = f"wind_{timestamp}"
+
+# x = psp
+# psp_raw = pd.read_pickle("data/processed/psp/psp_fld_l2_mag_rtn_201811.pkl")
+# psp = psp_raw["B_R"].values[:10000]
+# dataset_name = "Solar\ wind\ from\ PSP\ spacecraft"
+# dataset_brief = "psp"
+
+
+# # Remove slashes from dataset name for saving
+# dataset_name_save = dataset_name.replace("\\", "")
+
+# plt.plot(x_periodic, label="Periodic fBM field")
+# plt.plot(x, label="$\\mathbf{%s}$" % dataset_name)
+# plt.legend()
+# # plt.savefig(f"plots/{dataset_name_save}_time_series.png")
+# plt.show()
+
+# # Compute the spectra
+# for data in [x_periodic, x]:
+#     # for data in [x]:
+#     spectrum = ps.modal_spectrum(ar1=data, phys_dims=[L for _ in range(D)])
+#     plt.plot(spectrum[0][0], spectrum[1])
+# # plt.plot(np.arange(len(x_subset)), np.arange(len(x_subset)) ** (-5/3), color="black", linestyle="--")
+# plt.axvline(BREAK, color="black", linestyle="--", label="Break frequency")
+# plt.semilogx()
+# plt.semilogy()
+# plt.xlim(spectrum[0][0].min(), spectrum[0][0].max())
+# plt.ylim(1e-5, 1e3)
+# plt.legend()
+# plt.title("$\\mathbf{%s}$: Power spectral density" % dataset_name)
+# # plt.savefig(f"plots/{dataset_name_save}_psd.png")
+# plt.show()
+
+##########################################################
 
 # Compute the structure function
-lags = np.arange(1, len(x))
+lags = np.arange(1, 0.25 * len(x))
 powers = [0.5, 2]
 
 good_output = sf.compute_sf(pd.DataFrame(x), lags, powers, retain_increments=True)
@@ -105,24 +134,24 @@ good_output["dowd"] = (good_output["mapd"] ** 2) * 2.198
 
 lag_vals = get_lag_vals_list(good_output)
 
-
-fig, ax = plt.subplots(figsize=(8, 4))
-ax.scatter(lag_vals["lag"], lag_vals["sq_diffs"], alpha=0.01, s=1, c="black")
-ax.plot(good_output["ch"], label="Cressie-Hawkins")
-ax.plot(good_output["dowd"], label="Dowd")
-ax.plot(good_output["sosf"], label="Classical")
-ax.axhline(y=2 * np.var(x), color="black", linestyle=":", label=r"$2\sigma^2$")
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.scatter(lag_vals["lag"], lag_vals["sq_diffs"], alpha=0.005, s=0.5, c="black")
+ax.plot(good_output["classical"], label="Classical", lw=3)
+ax.plot(good_output["ch"], label="Cressie-Hawkins", lw=1.5)
+ax.plot(good_output["dowd"], label="Dowd", lw=1.5)
+ax.axhline(y=2 * np.var(x), color="yellow", linestyle=":", label=r"$2\sigma^2$")
 # Plot a powerlaw
 ax.plot(
-    good_output["n"],
-    0.8 * good_output["n"] ** (2 / 3),
-    color="grey",
+    good_output["lag"],
+    good_output["classical"].min() * 10 * good_output["lag"] ** (2 / 3),
+    color="purple",
     linestyle="--",
     label=r"$\tau^{2/3}$ power-law",
 )
 ax.semilogx()
 ax.semilogy()
-ax.set_ylim(1e-2, 1e2)
+ax.set_ylim(good_output["classical"].min() / 2, good_output["classical"].max() * 5)
+ax.set_xlim(1, lags[-1])
 ax.set_title("$\\mathbf{%s}$: Various estimators of SF" % dataset_name)
 ax.set_xlabel(r"Lag ($\tau$)")
 ax.set_ylabel(r"$S_{2}(\tau)$")
@@ -137,25 +166,24 @@ for lag in lags_to_examine:
         fill=False,
         edgecolor="red",
         linestyle="--",
+        alpha=0.8,
     )  # change color and linestyle as needed
     ax.add_patch(rect)
 
 
 plt.legend(loc="upper left")
-plt.savefig(f"plots/{dataset_name_save}_sf_estimators.png")
-plt.show()
+plt.savefig(f"plots/{dataset_brief}_sf_estimators.png")
 
 # Calculate the increments of x and plot the histogram
 fig, ax = plt.subplots(
     3,
     len(lags_to_examine),
-    figsize=(14, 7),
+    figsize=(9, 9),
     tight_layout=True,
     gridspec_kw={"hspace": 0.3, "wspace": 0.05},
 )
 fig.suptitle(
-    r"$\mathbf{%s}$: $\tau$-scattergrams, PDFs and first 4 moments of increments $x(t)-x(t+\tau)$ at various lags $\tau$"
-    % dataset_name,
+    r"$\mathbf{%s}$: $\tau$-scattergrams and PDFs of selected lags" % dataset_name,
     fontsize=14,
 )
 
@@ -164,8 +192,8 @@ x_series = pd.Series(x)  # to use the diff method, very different from np.diff
 for i, lag in enumerate(lags_to_examine):
     x_series_lagged = x_series.shift(lag)
     increments = x_series - x_series_lagged  # same as x_series.diff(lag)
-    ax[0, i].set_title(r"$\mathbf{\tau={%s}}$" % lag, fontsize=15, color="red")
-    ax[0, i].scatter(x_series, x_series_lagged, s=1)
+    ax[0, i].set_title(r"$\mathbf{\tau={%s}}$" % lag, fontsize=20, color="red")
+    ax[0, i].scatter(x_series, x_series_lagged, s=1, alpha=0.2)
     ax[0, i].annotate(
         f"$r$ ={x_series.corr(x_series_lagged):.2f}",
         (0.05, 0.9),
@@ -173,7 +201,7 @@ for i, lag in enumerate(lags_to_examine):
         fontsize=9,
     )
 
-    ax[1, i].hist(increments, bins=30)
+    ax[1, i].hist(increments, bins=50, alpha=0.5)
 
     # Annotate the values of the first four moments
     ax[1, i].annotate(
@@ -213,12 +241,12 @@ for i, lag in enumerate(lags_to_examine):
         ),
     )
 
-    ax[2, i].hist((increments**2), bins=30)
+    ax[2, i].hist((increments**2), bins=50, color="black", alpha=0.5)
 
     # Annotate the values of the first four moments
     ax[2, i].annotate(
         rf"$\mu$={(increments**2).mean():.2f}",
-        (0.05, 0.9),
+        (0.6, 0.9),
         xycoords="axes fraction",
         fontsize=9,
         bbox=dict(
@@ -227,7 +255,7 @@ for i, lag in enumerate(lags_to_examine):
     )
     ax[2, i].annotate(
         rf"$\sigma^2$={(increments**2).var():.2f}",
-        (0.05, 0.8),
+        (0.6, 0.8),
         xycoords="axes fraction",
         fontsize=9,
         bbox=dict(
@@ -236,7 +264,7 @@ for i, lag in enumerate(lags_to_examine):
     )
     ax[2, i].annotate(
         f"Skew={(increments**2).skew():.2f}",
-        (0.05, 0.7),
+        (0.6, 0.7),
         xycoords="axes fraction",
         fontsize=9,
         bbox=dict(
@@ -245,7 +273,7 @@ for i, lag in enumerate(lags_to_examine):
     )
     ax[2, i].annotate(
         f"Kurt={((increments**2).kurtosis()+3):.2f}",  # Add 3 to get actual kurtosis
-        (0.05, 0.6),
+        (0.6, 0.6),
         xycoords="axes fraction",
         fontsize=9,
         bbox=dict(
@@ -259,13 +287,19 @@ for i, lag in enumerate(lags_to_examine):
     ax[0, i].set_ylim([x_series.min(), x_series.max()])
 
     ax[1, i].set_xlabel(r"$x(t)-x(t+\tau)$")
-    ax[1, i].set_ylabel("Count")
+    ax[2, i].set_xlabel(r"$(x(t)-x(t+\tau))^2$")
+    ax[1, i].set_ylabel("Frequency")
+    ax[2, i].set_ylabel("Frequency")
 
     # Add vertical lines corresponding to the mean and median
     ax[1, i].axvline(increments.mean(), color="black", linestyle="-", label="Mean")
     ax[1, i].axvline(increments.median(), color="black", linestyle="--", label="Median")
-    # ax[1, i].set_yscale("log")
-    # ax[1, i].set_ylim(1, 1e3)
+
+    ax[1, i].set_yscale("log")
+    # ax[2, i].set_yscale("log")
+    # ax[2, i].set_xscale("log")
+    ax[1, i].set_ylim(1, 1e5)
+
     # ax[1, i].set_xlim(-3, 3)
     # Overlay an "equivalent Gaussian" (same mean and variance)
     x_vals = np.linspace(increments.min(), increments.max(), 100)
@@ -286,7 +320,8 @@ for i, lag in enumerate(lags_to_examine):
     if i != 0:
         ax[0, i].set_yticklabels([])
         ax[1, i].set_yticklabels([])
+        ax[2, i].set_yticklabels([])
         ax[0, i].set_ylabel("")
         ax[1, i].set_ylabel("")
-plt.savefig(f"plots/lag_stats_{dataset_name_save}.png")
-plt.show()
+        ax[2, i].set_ylabel("")
+plt.savefig(f"plots/{dataset_brief}_lag_stats.png")
