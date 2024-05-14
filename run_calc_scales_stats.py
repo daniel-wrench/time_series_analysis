@@ -8,10 +8,12 @@ import numpy as np
 timestamp = "20160101"
 
 wind_raw = pd.read_pickle("data/processed/wind/mfi/" + timestamp + ".pkl")
-wind = wind_raw[10000:20000]
+wind_resampled = wind_raw.resample("0.1S").mean()
+wind = wind_resampled[10000:20000]
 
 psp_raw = pd.read_pickle("data/processed/psp/psp_fld_l2_mag_rtn_201811.pkl")
-psp = psp_raw[:10000]
+psp_resampled = psp_raw.resample("0.1S").mean()
+psp = psp_resampled[:10000]
 
 fbm = pd.read_pickle("data/processed/wind/fbm_field_" + timestamp + ".pkl")
 
@@ -22,7 +24,7 @@ wind_params = {
     "f_max_inertial": None,  # 0.2,
     "f_min_kinetic": None,  # 0.5,
     "f_max_kinetic": None,  # 1.4,
-    "nlags_lr": 2000,
+    "nlags_lr": 2500,  # Should be the same as max_lag * int_length for SF calculation
     "nlags_hr": 100,
     "dt_lr": "0.1S",
     # LR version is used for calculation SFN and ACF; original HR for spectrum and taylor scale
@@ -36,7 +38,7 @@ fbm_params = {
     "f_max_kinetic": None,  # 0.2,
     "f_min_inertial": None,  # 0.001,
     "f_max_inertial": None,  # 0.1,
-    "nlags_lr": 2000,
+    "nlags_lr": 2500,
     "nlags_hr": 100,
     "dt_lr": "1S",
     # LR version is used for calculation SFN and ACF; original HR for spectrum and taylor scale
@@ -66,6 +68,7 @@ flr, flt = calc_scales_stats([wind.Bx], "Bx", wind_params)
 
 # # Save dictionary for later plotting
 flr.to_pickle("data/processed/wind/" + "Bx_raw_" + timestamp + ".pkl")
+
 with open("data/processed/wind/" + "Bx_turb_" + timestamp + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
