@@ -290,7 +290,7 @@ def calc_scales_stats(time_series, var_name, params_dict):
         acf_hr = np.nan
 
     int_lr_df = pd.concat(time_series_low_res, axis=1)
-    sfns = structure(int_lr_df, np.arange(1, round(0.2 * len(int_lr_df))), [1, 2, 3, 4])
+    sfns = structure(int_lr_df, np.arange(1, round(0.25 * len(int_lr_df))), [2, 4])
 
     # Calculate kurtosis (currently not component-wise)
     sdk = sfns[["2", "4"]].copy()
