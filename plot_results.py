@@ -103,7 +103,7 @@ for input_ind in range(n_ints_to_plot):
         "SF estimation subject to missing data: naive",
     )
     plt.savefig(save_dir + f"sf_i_{input_ind}_naive.png")
-    plt.clf()
+    plt.close()
 
     sf.plot_sample(
         good_inputs_test,
@@ -116,7 +116,7 @@ for input_ind in range(n_ints_to_plot):
         "SF estimation subject to missing data: linear interpolation",
     )
     plt.savefig(save_dir + f"sf_i_{input_ind}_lint.png")
-    plt.clf()
+    plt.close()
 
 
 # Do holistic analysis of errors
@@ -157,7 +157,7 @@ for estimator in ["classical", "ch", "dowd"]:
         title=f"SF estimation ({estimator}, naive) error vs. lag and global sparsity",
     )
     plt.savefig(save_dir + f"error_lag_{estimator}_naive.png")
-    plt.clf()
+    plt.close()
 
     sf.plot_error_trend_line(
         other_outputs_df=interp_outputs_train_df,
@@ -165,7 +165,7 @@ for estimator in ["classical", "ch", "dowd"]:
         title=f"SF estimation ({estimator}, lint) error vs. lag and global sparsity",
     )
     plt.savefig(save_dir + f"error_lag_{estimator}_lint.png")
-    plt.clf()
+    plt.close()
 
 
 def plot_average_errors(df):
@@ -180,11 +180,11 @@ def plot_average_errors(df):
 plot_average_errors(interp_outputs_train_df)
 plt.title("Average errors by lag in naive SFs")
 plt.savefig(save_dir + "error_lag_classical_avg.png")
-plt.clf()
+plt.close()
 
 sf.plot_error_trend_scatter(bad_outputs_train_df, interp_outputs_train_df)
 plt.savefig(save_dir + "error_lag_classical_avg.png")
-plt.clf()
+plt.close()
 
 # Check any cases of particularly large errors in lint dataset
 # print("\nLargest errors in LINT SFs:\n")
@@ -221,7 +221,7 @@ for n_bins in [15, 20, 25]:
     ax.set_facecolor("black")
     ax.set_xscale("log")
     plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d_naive.png")
-    plt.clf()
+    plt.close()
 
     # Now with linear interpolation
     print(f"Calculating 3D heatmap with {n_bins} bins")
@@ -244,7 +244,7 @@ for n_bins in [15, 20, 25]:
     ax.set_facecolor("black")
     ax.set_xscale("log")
     plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d.png")
-    plt.clf()
+    plt.close()
 
     fig, ax = plt.subplots(figsize=(7, 5))
     hb = ax.hist2d(
@@ -260,7 +260,7 @@ for n_bins in [15, 20, 25]:
     plt.ylabel("Missing proportion")
     plt.title("Distribution of missing proportion and lag (linear bins)")
     plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d_counts.png")
-    plt.clf()
+    plt.close()
 
     # Now in 3D
     # (logarithmic spacing for lags and power)
@@ -468,7 +468,7 @@ for n_bins in [15, 20, 25]:
         plt.savefig(
             save_dir + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d.png"
         )
-        plt.clf()
+        plt.close()
 
 # Plotting 3D heatmaps
 
@@ -498,7 +498,7 @@ for i in range(n_bins):
         ax[i].set_yticklabels([])
         ax[i].set_ylabel("")
 plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_power.png")
-plt.clf()
+plt.close()
 
 fig, ax = plt.subplots(1, n_bins, figsize=(n_bins * 3, 3), tight_layout=True)
 # Remove spacing between subplots
@@ -526,7 +526,7 @@ for i in range(n_bins):
         ax[i].set_yticklabels([])
         ax[i].set_ylabel("")
 plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_lag.png")
-plt.clf()
+plt.close()
 
 fig, ax = plt.subplots(1, n_bins, figsize=(n_bins * 3, 3), tight_layout=True)
 # Remove spacing between subplots
@@ -556,4 +556,4 @@ for i in range(n_bins):
         ax[i].set_yticklabels([])
         ax[i].set_ylabel("")
 plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_missing.png")
-plt.clf()
+plt.close()
