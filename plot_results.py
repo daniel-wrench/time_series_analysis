@@ -6,6 +6,15 @@ import src.sf_funcs as sf
 import pickle
 from sklearn.model_selection import train_test_split
 
+from datetime import datetime
+
+# Get the current time
+current_time = datetime.now()
+
+# Print the current time
+print("Current time:", current_time, "\n")
+
+
 # Because Rāpoi can't handle latex apparently
 plt.rcParams.update(
     {
@@ -557,3 +566,6 @@ for i in range(n_bins):
         ax[i].set_ylabel("")
 plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_missing.png")
 plt.close()
+
+print("Done!")
+print("\nCurrent time:", current_time)
