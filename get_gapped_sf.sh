@@ -1,11 +1,11 @@
 #!/bin/bash -e
 
 #SBATCH --job-name          get_gapped_sf
-#SBATCH --partition         parallel
-#SBATCH --reservation	    SpjReservation
-#SBATCH --nodelist          spj01
-#SBATCH --mem               120G
-#SBATCH --cpus-per-task     120
+#SBATCH --partition         quicktest
+##SBATCH --reservation	    SpjReservation
+##SBATCH --nodelist          spj01
+#SBATCH --mem               50G
+#SBATCH --cpus-per-task     50
 #SBATCH --time              3:00:00
 #SBATCH --output            %x.out
 #SBATCH --error             %x.err
@@ -22,6 +22,6 @@ echo "JOB STARTED"
 date
 
 #rm -r data/processed/*
-mpirun --oversubscribe -mca pml ucx -mca btl '^uct,ofi' -mca mtl '^ofi' -n $SLURM_CPUS_PER_TASK python get_gapped_sf.py 100
+mpirun --oversubscribe -mca pml ucx -mca btl '^uct,ofi' -mca mtl '^ofi' -n $SLURM_CPUS_PER_TASK python get_gapped_sf.py 50
 
 echo "FINISHED"

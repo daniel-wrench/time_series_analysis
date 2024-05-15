@@ -51,16 +51,16 @@ except ImportError:
 
 # Get list of files in psp directory and split between cores
 # (if running in parallel)
-raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
-# raw_file_list = sorted(
-#     #    glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
-#     glob.iglob(
-#         "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
-#         + "/*.cdf"
-#     )
-# )  # HPC
+# raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
+raw_file_list = sorted(
+#      glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+     glob.iglob(
+         "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
+         + "/*.cdf"
+     )
+)  # HPC
 
-file_list_split = np.array_split(raw_file_list, size)
+file_list_split = np.array_split(raw_file_list[:200], size)
 
 # Broadcast the list of files to all cores
 file_list_split = comm.bcast(file_list_split, root=0)
@@ -301,8 +301,8 @@ list_of_list_of_dfs = [
 ]
 
 with open(
-    f"data/processed/sfs_psp_core_{rank}.pkl",
-    # f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl",
+    #f"data/processed/sfs_psp_core_{rank}.pkl",
+    f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl",
     "wb",
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
