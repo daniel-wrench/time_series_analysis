@@ -6,12 +6,11 @@
 
 import glob
 import pickle
-from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 import ts_dashboard_utils as ts
-import utils as utils  # copied directly from Reynolds project, normalize() added
-import sf_funcs as sf
+import src.utils as utils  # copied directly from Reynolds project, normalize() added
+import src.sf_funcs as sf
 import sys
 import data_import_funcs as dif
 
@@ -53,11 +52,11 @@ except ImportError:
 # (if running in parallel)
 # raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
 raw_file_list = sorted(
-#      glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
-     glob.iglob(
-         "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
-         + "/*.cdf"
-     )
+    #      glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+    glob.iglob(
+        "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
+        + "/*.cdf"
+    )
 )  # HPC
 
 file_list_split = np.array_split(raw_file_list[:200], size)
@@ -301,7 +300,7 @@ list_of_list_of_dfs = [
 ]
 
 with open(
-    #f"data/processed/sfs_psp_core_{rank}.pkl",
+    # f"data/processed/sfs_psp_core_{rank}.pkl",
     f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl",
     "wb",
 ) as f:

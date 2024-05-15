@@ -2,8 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import utils as utils  # copied directly from Reynolds project, normalize() added
-import sf_funcs as sf
+import src.sf_funcs as sf
 import pickle
 from sklearn.model_selection import train_test_split
 
@@ -19,7 +18,7 @@ plt.rcParams.update(
 
 
 input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_medium/"
-#input_path = "data/processed/"
+# input_path = "data/processed/"
 # save_dir = "plots/big/"
 save_dir = "plots/plots_medium/"
 missing_measure = "missing_prop"
@@ -29,7 +28,7 @@ n_versions_to_plot = 4  # Number of version of each interval to plot
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
 pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:100]
-#pickle_files = ["sfs_psp_core_0.pkl"]
+# pickle_files = ["sfs_psp_core_0.pkl"]
 good_inputs_list = []
 good_outputs_list = []
 all_bad_inputs_list = []
