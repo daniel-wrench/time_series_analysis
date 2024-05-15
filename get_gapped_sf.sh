@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 #SBATCH --job-name          get_gapped_sf
-#SBATCH --partition         quicktest
+#SBATCH --partition         parallel
 ##SBATCH --reservation	    SpjReservation
 ##SBATCH --nodelist          spj01
 #SBATCH --mem               50G

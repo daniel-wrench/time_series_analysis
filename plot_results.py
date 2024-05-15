@@ -20,14 +20,14 @@ plt.rcParams.update(
 input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_medium/"
 # input_path = "data/processed/"
 # save_dir = "plots/big/"
-save_dir = "plots/plots_medium/"
+save_dir = "plots/plots_small/"
 missing_measure = "missing_prop"
 n_ints_to_plot = 3
 n_versions_to_plot = 4  # Number of version of each interval to plot
 
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
-pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:100]
+pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:10]
 # pickle_files = ["sfs_psp_core_0.pkl"]
 good_inputs_list = []
 good_outputs_list = []
