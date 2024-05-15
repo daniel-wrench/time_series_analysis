@@ -12,7 +12,7 @@ import ts_dashboard_utils as ts
 import src.utils as utils  # copied directly from Reynolds project, normalize() added
 import src.sf_funcs as sf
 import sys
-import data_import_funcs as dif
+import src.data_import_funcs as dif
 
 # Setting up parallel processing (or not, if running locally)
 try:
@@ -188,6 +188,10 @@ for interval_approx in interval_list_approx:
         print(f"An error occurred: {e}")
         continue
 
+if len(good_inputs_list) == 0:
+   print("No good inputs found (good_inputs_list is empty). Exiting.")
+   exit(1)
+
 print(
     "\nNumber of standardised intervals: " + str(len(good_inputs_list))
     # + "\n(may be more than one per original chunk for small cadences)"
@@ -301,7 +305,7 @@ list_of_list_of_dfs = [
 
 with open(
     # f"data/processed/sfs_psp_core_{rank}.pkl",
-    f"/nfs/scratch/wrenchdani/time_series_analysis/data/processed/sfs_psp_core_{rank}.pkl",
+    "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(rank),
     "wb",
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
