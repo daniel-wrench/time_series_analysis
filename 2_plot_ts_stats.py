@@ -361,8 +361,8 @@ plotz(
 )
 
 plotz(
-    tfiles=glob.glob("data/processed/wind/fbm_turb" + ".pkl"),
-    rfiles=glob.glob("data/processed/wind/fbm_raw" + ".pkl"),
+    tfiles=glob.glob("data/processed/fbm_turb" + ".pkl"),
+    rfiles=glob.glob("data/processed/fbm_raw" + ".pkl"),
     name="fbm",
     var_name="multi-fractal\ fractional\ Brownian\ motion",
     unit="",

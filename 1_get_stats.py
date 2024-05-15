@@ -14,7 +14,7 @@ psp_raw = pd.read_pickle("data/processed/psp/psp_fld_l2_mag_rtn_201811.pkl")
 psp_resampled = psp_raw.resample("0.1S").mean()
 psp = psp_resampled[:10000]
 
-fbm = pd.read_pickle("data/processed/wind/fbm_field_" + timestamp + ".pkl")
+fbm = pd.read_pickle("data/processed/fbm_field_" + timestamp + ".pkl")
 
 # Frequency bounds are taken from Wang et al. (2018, JGR)
 wind_params = {
@@ -82,8 +82,8 @@ with open("data/processed/psp/" + "B_R_turb_" + timestamp + ".pkl", "wb") as fil
 flr, flt = calc_scales_stats([fbm], "fbm", fbm_params)
 
 # # Save dictionary for later plotting
-flr.to_pickle("data/processed/wind/" + "fbm_raw" + ".pkl")
-with open("data/processed/wind/" + "fbm_turb" + ".pkl", "wb") as file:
+flr.to_pickle("data/processed/" + "fbm_raw" + ".pkl")
+with open("data/processed/" + "fbm_turb" + ".pkl", "wb") as file:
     pickle.dump(flt, file)
 
 

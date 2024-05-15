@@ -1,7 +1,3 @@
-# Testing fbm code
-
-# from Kea.Kea.simulator import fbm as fbm
-# from Kea.Kea.statistics.spectra import per_spectra as ps
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -30,76 +26,9 @@ plt.rcParams.update(
     }
 )
 
-##################################
-
-# from fbm import FBM
-
-# Two ways of creating fBm
-
-# 1. Specifying Hurst parameter, H
-
-# fbm = FBM(n=N, hurst=H, length=L, method="daviesharte")
-# X = fbm.fbm()
-
-# 2. Specifying power-law/s, alphas
-
-# N = 10000
-# D = 1
-# L = N
-# dk = 2.0 * np.pi / L
-# BREAK = 100.0 * dk
-
-random.seed(42)
-# x = fbm.create_fbm(grid_dims=(1000,), phys_dims=(1000,), alphas=(-1,-5/3), breaks=(100,), )
-# x_periodic = fbm.create_fbm(
-#     grid_dims=[4 * N for _ in range(D)],
-#     phys_dims=[L for _ in range(D)],
-#     alphas=(-1.0, -5.0 / 3.0),
-#     gfunc="smooth_pow",
-#     func_kwargs={"breaks": (BREAK,), "delta": 0.25},
-# )
-
-# timestamp = "20160101"
-# fbm_field = pd.Series(
-#     x_periodic[:N], name="fbm", index=pd.date_range(timestamp, periods=N, freq="S")
-# )
-
-# fbm_field.to_pickle("data/processed/wind/fbm_field_" + timestamp + ".pkl")
-
-##################################
-
-# dataset_name = "PSP\ solar\ wind"
-
-
-##################################
-
-# # Remove slashes from dataset name for saving
-# dataset_name_save = dataset_name.replace("\\", "")
-
-# plt.plot(x_periodic, label="Periodic fBM field")
-# plt.plot(x, label="$\\mathbf{%s}$" % dataset_name)
-# plt.legend()
-# # plt.savefig(f"plots/background/{dataset_name_save}_time_series.png")
-# plt.show()
-
-# # Compute the spectra
-# for data in [x_periodic, x]:
-#     # for data in [x]:
-#     spectrum = ps.modal_spectrum(ar1=data, phys_dims=[L for _ in range(D)])
-#     plt.plot(spectrum[0][0], spectrum[1])
-# # plt.plot(np.arange(len(x_subset)), np.arange(len(x_subset)) ** (-5/3), color="black", linestyle="--")
-# plt.axvline(BREAK, color="black", linestyle="--", label="Break frequency")
-# plt.semilogx()
-# plt.semilogy()
-# plt.xlim(spectrum[0][0].min(), spectrum[0][0].max())
-# plt.ylim(1e-5, 1e3)
-# plt.legend()
-# plt.title("$\\mathbf{%s}$: Power spectral density" % dataset_name)
-# # plt.savefig(f"plots/background/{dataset_name_save}_psd.png")
-# plt.show()
 
 ##########################################################
-
+# MAKE SURE DATA IMPORT PIPELINE BELOW IS IDENTICAL TO OTHER SCRIPTS
 
 timestamp = "20160101"
 
@@ -111,7 +40,8 @@ psp_raw = pd.read_pickle("data/processed/psp/psp_fld_l2_mag_rtn_201811.pkl")
 psp_resampled = psp_raw["B_R"].resample("0.1S").mean()
 psp = psp_resampled[:10000]
 
-fbm = pd.read_pickle("data/processed/wind/fbm_field_" + timestamp + ".pkl")
+# Created in sim_fbm.py
+fbm = pd.read_pickle("data/processed/fbm_field_" + timestamp + ".pkl")
 
 data_dict = {
     "x": [psp, wind, fbm],
@@ -136,7 +66,9 @@ for x, dataset_name, dataset_brief, dt in zip(
     data_dict["dataset_brief"],
     data_dict["dt"],
 ):
-    print(f"Processing {dataset_name}...")
+    print(
+        "Processing {}...".format(dataset_name.replace("\\", ""))
+    )  # Replace slashes needed for titles
 
     # Compute the structure function
     lags = np.arange(1, 0.25 * len(x))
