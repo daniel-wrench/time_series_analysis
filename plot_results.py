@@ -18,19 +18,18 @@ plt.rcParams.update(
 )
 
 
-# input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed/"
-input_path = "data/processed/"
+input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_medium/"
+#input_path = "data/processed/"
 # save_dir = "plots/big/"
-save_dir = "plots/plots_local/"
+save_dir = "plots/plots_medium/"
 missing_measure = "missing_prop"
-n_bins = 15
-n_ints_to_plot = 2
-n_versions_to_plot = 2  # Number of version of each interval to plot
+n_ints_to_plot = 3
+n_versions_to_plot = 4  # Number of version of each interval to plot
 
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
-# pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")]
-pickle_files = ["sfs_psp_core_0.pkl"]
+pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:100]
+#pickle_files = ["sfs_psp_core_0.pkl"]
 good_inputs_list = []
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -201,6 +200,7 @@ plt.clf()
 
 for n_bins in [15, 20, 25]:
     # First with no interpolation
+    print(f"Calculating 2D heatmap with {n_bins} bins")
     heatmap_bin_vals_log_bad, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
         sf.create_heatmap_lookup(
             bad_outputs_train_df, missing_measure, n_bins, log=True
@@ -225,6 +225,7 @@ for n_bins in [15, 20, 25]:
     plt.clf()
 
     # Now with linear interpolation
+    print(f"Calculating 3D heatmap with {n_bins} bins")
     heatmap_bin_vals, heatmap_bin_edges, lookup_table = sf.create_heatmap_lookup(
         interp_outputs_train_df, missing_measure, n_bins, log=True
     )
@@ -271,11 +272,11 @@ for n_bins in [15, 20, 25]:
     )
 
     # Apply 2D and 3D scaling to test set, report avg errors
-
+    print(f"Correcting test set intervals using 2D error heatmap with {n_bins} bins")
     test_set_corrected = sf.compute_scaling(
         interp_outputs_test_df, missing_measure, lookup_table
     )
-
+    print(f"Correcting test set intervals using 3D error heatmap with {n_bins} bins")
     test_set_corrected_3d = sf.compute_scaling_3d(
         interp_outputs_test_df, missing_measure, lookup_table_3d
     )
