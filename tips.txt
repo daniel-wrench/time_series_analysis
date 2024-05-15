@@ -1,0 +1,5 @@
+- plot_results.py: Run in tmux but do not save output to separate filed
+- Always start small!
+- Track a few small runs then talk to Rāpoi folks if confusing
+- Job 1042459 read in 100 files, next one will do 200 - TAKING MUCH MORE THAN TWICE AS LONG
+- **GIT PUSH AND PULL - IMPORTANT UPDATES**
