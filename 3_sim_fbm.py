@@ -79,7 +79,7 @@ random.seed(42)
 # plt.plot(x_periodic, label="Periodic fBM field")
 # plt.plot(x, label="$\\mathbf{%s}$" % dataset_name)
 # plt.legend()
-# # plt.savefig(f"plots/{dataset_name_save}_time_series.png")
+# # plt.savefig(f"plots/background/{dataset_name_save}_time_series.png")
 # plt.show()
 
 # # Compute the spectra
@@ -95,7 +95,7 @@ random.seed(42)
 # plt.ylim(1e-5, 1e3)
 # plt.legend()
 # plt.title("$\\mathbf{%s}$: Power spectral density" % dataset_name)
-# # plt.savefig(f"plots/{dataset_name_save}_psd.png")
+# # plt.savefig(f"plots/background/{dataset_name_save}_psd.png")
 # plt.show()
 
 ##########################################################
@@ -193,7 +193,7 @@ for x, dataset_name, dataset_brief, dt in zip(
         ax.add_patch(rect)
 
     plt.legend(loc="upper left")
-    plt.savefig(f"plots/{dataset_brief}_sf_estimators.png")
+    plt.savefig(f"plots/background/{dataset_brief}_sf_estimators.png")
 
     # Calculate the increments of x and plot the histogram
     fig, ax = plt.subplots(
@@ -379,6 +379,6 @@ for x, dataset_name, dataset_brief, dt in zip(
             ax[1, i].set_ylabel("")
             ax[2, i].set_ylabel("")
 
-    plt.savefig(f"plots/{dataset_brief}_stats_lags.png")
+    plt.savefig(f"plots/background/{dataset_brief}_stats_lags.png")
 
 print("Done!")

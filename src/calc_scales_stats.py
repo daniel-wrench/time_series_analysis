@@ -172,7 +172,7 @@ def calc_scales_stats(time_series, var_name, params_dict):
 
     :return: pd.DataFrame, dict
     """
-    print("Calculating stats for {}".format(var_name)
+    print("Calculating stats for {}".format(var_name))
     if len(time_series) == 3:
         # Compute magnitude of vector time series
         x_mean = time_series[0].mean()
@@ -331,5 +331,3 @@ def calc_scales_stats(time_series, var_name, params_dict):
     }
 
     return int_lr_df, stats_dict
-
-print("Done!")

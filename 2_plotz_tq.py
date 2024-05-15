@@ -31,7 +31,13 @@ plt.rcParams.update(
 
 def plotz(tfiles, rfiles, name, var_name, unit, spacecraft, plotpoints, timestamp):
     pdf = PdfPages(
-        "plots/" + spacecraft + "_" + name + "_" + timestamp + "_stats_ts.pdf"
+        "plots/background/"
+        + spacecraft
+        + "_"
+        + name
+        + "_"
+        + timestamp
+        + "_stats_ts.pdf"
     )
     lags_to_examine = [5, 50, 500]
     for flt, flr in zip(tfiles, rfiles):
@@ -380,3 +386,5 @@ plotz(
 #     plotpoints=400,
 #     timestamp=timestamp,
 # )
+
+print("Done!")

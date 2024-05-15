@@ -111,3 +111,5 @@ with open("data/processed/wind/" + "B_turb_" + timestamp + ".pkl", "wb") as file
 # flr.to_pickle("data/processed/wind/" + "np_raw_" + timestamp + ".pkl")
 # with open("data/processed/wind/" + "np_turb_" + timestamp + ".pkl", "wb") as file:
 #     pickle.dump(flt, file)
+
+print("Done!")
