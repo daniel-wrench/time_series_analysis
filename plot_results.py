@@ -8,12 +8,8 @@ from sklearn.model_selection import train_test_split
 
 from datetime import datetime
 
-# Get the current time
-current_time = datetime.now()
-
 # Print the current time
-print("Current time:", current_time, "\n")
-
+print("Current time:", datetime.now(), "\n")
 
 # Because Rāpoi can't handle latex apparently
 plt.rcParams.update(
@@ -25,12 +21,11 @@ plt.rcParams.update(
     }
 )
 
+# input_path = "data/processed/"
+# save_dir = "plots/sim_results_local/"
+input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/"
+save_dir = "plots/plots_small/"
 
-# input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_medium/"
-# save_dir = "plots/plots_small/"
-
-input_path = "data/processed/"
-save_dir = "plots/sim_results_local/"
 missing_measure = "missing_prop"
 n_ints_to_plot = 2
 n_versions_to_plot = 2  # Number of version of each interval to plot
@@ -569,8 +564,7 @@ plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_3d_missing.png")
 plt.close()
 
 print("Done!")
-print("\nCurrent time:", current_time)
-
+print("\nCurrent time:", datetime.now())
 
 ##################################
 
