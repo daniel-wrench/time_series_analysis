@@ -7,11 +7,11 @@ import pickle
 timestamp = "20160101"
 
 wind_raw = pd.read_pickle("data/processed/wind/mfi/" + timestamp + ".pkl")
-wind_resampled = wind_raw.resample("0.1S").mean()
-wind = wind_resampled[10000:20000]
+wind_resampled = wind_raw.resample("0.5S").mean()
+wind = wind_resampled[:10000]
 
 psp_raw = pd.read_pickle("data/processed/psp/psp_fld_l2_mag_rtn_201811.pkl")
-psp_resampled = psp_raw.resample("0.1S").mean()
+psp_resampled = psp_raw.resample("0.5S").mean()
 psp = psp_resampled[:10000]
 
 fbm = pd.read_pickle("data/processed/fbm_field_" + timestamp + ".pkl")
@@ -25,7 +25,7 @@ wind_params = {
     "f_max_kinetic": None,  # 1.4,
     "nlags_lr": 2500,  # Should be the same as max_lag * int_length for SF calculation
     "nlags_hr": 100,
-    "dt_lr": "0.1S",
+    "dt_lr": "0.5S",
     # LR version is used for calculation SFN and ACF; original HR for spectrum and taylor scale
     "tau_min": 10,
     "tau_max": 50,

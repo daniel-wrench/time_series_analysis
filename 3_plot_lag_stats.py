@@ -33,11 +33,11 @@ plt.rcParams.update(
 timestamp = "20160101"
 
 wind_raw = pd.read_pickle("data/processed/wind/mfi/" + timestamp + ".pkl")
-wind_resampled = wind_raw["Bx"].resample("0.1S").mean()
-wind = wind_resampled[10000:20000]
+wind_resampled = wind_raw["Bx"].resample("0.5S").mean()
+wind = wind_resampled[:10000]
 
 psp_raw = pd.read_pickle("data/processed/psp/psp_fld_l2_mag_rtn_201811.pkl")
-psp_resampled = psp_raw["B_R"].resample("0.1S").mean()
+psp_resampled = psp_raw["B_R"].resample("0.5S").mean()
 psp = psp_resampled[:10000]
 
 # Created in sim_fbm.py
@@ -209,6 +209,7 @@ for x, dataset_name, dataset_brief, dt in zip(
             ),
         )
 
+        # Plot values of the increments squared
         ax[2, i].hist((increments**2), bins=50, color="black", alpha=0.5)
 
         # Annotate the values of the first four moments
@@ -282,7 +283,7 @@ for x, dataset_name, dataset_brief, dt in zip(
         )
 
         ax[1, i].set_yscale("log")
-        # ax[2, i].set_yscale("log")
+        ax[2, i].set_yscale("log")
         # ax[2, i].set_xscale("log")
         ax[1, i].set_ylim(1, 1e5)
 

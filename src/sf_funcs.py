@@ -317,7 +317,7 @@ def plot_error_trend_line(
         other_outputs_df[estimator + "_error_percent"],
         c=other_outputs_df["missing_prop_overall"],
         s=0.08,
-        alpha=0.6,
+        alpha=0.2,
         cmap="plasma",
     )
     median_error = other_outputs_df.groupby("Lag")[
@@ -345,6 +345,7 @@ def plot_error_trend_line(
     plt.clim(0, 1)
     plt.ylim(-120, 500)
     plt.semilogx()
+    plt.yscale("symlog")
     plt.xlabel("Lag ($\\tau$)")
     plt.ylabel("% error")
     plt.legend(loc="upper right")
