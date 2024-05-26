@@ -570,3 +570,147 @@ plt.close()
 
 print("Done!")
 print("\nCurrent time:", current_time)
+
+
+##################################
+
+# Plot bar plots of test set errors
+
+
+# import seaborn as sns
+
+# # Create the DataFrame
+# data = {
+#     "Estimator": [
+#         "Classical",
+#         "Classical",
+#         "CH",
+#         "CH",
+#         "Dowd",
+#         "Dowd",
+#         "Classical",
+#         "Classical",
+#         "Classical",
+#         "Classical",
+#         "Classical",
+#         "Classical",
+#     ],
+#     "Corrected": [
+#         "No",
+#         "No",
+#         "No",
+#         "No",
+#         "No",
+#         "No",
+#         "Yes",
+#         "Yes",
+#         "Yes",
+#         "Yes",
+#         "Yes",
+#         "Yes",
+#     ],
+#     "Gap handling method": [
+#         "No handling",
+#         "LINT",
+#         "No handling",
+#         "LINT",
+#         "No handling",
+#         "LINT",
+#         "LINT",
+#         "LINT",
+#         "LINT",
+#         "LINT",
+#         "LINT",
+#         "LINT",
+#     ],
+#     "Number of bins": [
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         15,
+#         20,
+#         25,
+#         15,
+#         20,
+#         25,
+#     ],
+#     "Dimensions": [
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         np.nan,
+#         "2D",
+#         "2D",
+#         "2D",
+#         "3D",
+#         "3D",
+#         "3D",
+#     ],
+#     "MAPE on test set": [
+#         19.3,
+#         12.2,
+#         24.1,
+#         14.4,
+#         34.2,
+#         19.6,
+#         12.3,
+#         12.2,
+#         12.2,
+#         10.7,
+#         10.6,
+#         10.6,
+#     ],
+# }
+
+# df = pd.DataFrame(data)
+
+# Set the plot size
+plt.figure(figsize=(6, 4))
+plt.tight_layout()
+
+# Create the bar plot
+sns.barplot(
+    data=df[df.Corrected == "No"],
+    x="Gap handling method",
+    y="MAPE on test set",
+    hue="Estimator",
+)
+
+# Add title and labels
+plt.title("MAPE on Test Set by Estimator and Gap Handling Method")
+plt.xlabel("Gap handling method")
+plt.ylabel("MAPE on Test Set")
+
+# Return the y-lims of the plot
+ymin, ymax = plt.ylim()
+
+# Show the plot
+plt.show()
+
+# Set the plot size
+plt.figure(figsize=(6, 4))
+plt.tight_layout()
+# Create the bar plot
+sns.barplot(
+    data=df[df.Corrected == "Yes"],
+    x="Dimensions",
+    y="MAPE on test set",
+    hue="Number of bins",
+    palette=sns.color_palette("Blues", 3),
+)
+# Make the color palette a set of 3 blues
+
+
+# Add title and labels
+plt.title("MAPE on Test Set using Classical LINT + Correction Factor")
+plt.xlabel("Dimensionality of correction factor")
+plt.ylabel("MAPE on Test Set")
+plt.ylim(ymin, ymax)  # Set the y-lims to be the same as the previous plot
+
+# Show the plot
+plt.show()
