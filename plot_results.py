@@ -21,9 +21,16 @@ plt.rcParams.update(
     }
 )
 
+<<<<<<< HEAD
 #input_path = "data/processed/"
 #save_dir = "plots/sim_results_local/"
 input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/"
+=======
+
+input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/"
+# input_path = "data/processed/"
+# save_dir = "plots/big/"
+>>>>>>> 953e841 (fixing input and output to plotting script)
 save_dir = "plots/plots_small/"
 
 missing_measure = "missing_prop"
