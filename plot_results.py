@@ -221,7 +221,7 @@ plt.close()
 # Compute heatmap of average error as fn of lag and missing prop at that lag
 # (logarithmic spacing for lags)
 
-for n_bins in [15, 20, 25]:
+for n_bins in [15]:
     # First with no interpolation
     print(f"Calculating 2D heatmap with {n_bins} bins")
     heatmap_bin_vals_log_bad, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
