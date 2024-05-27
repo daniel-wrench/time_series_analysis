@@ -21,10 +21,10 @@ plt.rcParams.update(
     }
 )
 
-# input_path = "data/processed/"
-# save_dir = "plots/sim_results_local/"
-input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/"
-save_dir = "plots/plots_small/"
+input_path = "data/processed/"
+save_dir = "plots/sim_results_local/"
+# input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/"
+# save_dir = "plots/plots_small/"
 
 missing_measure = "missing_prop"
 n_ints_to_plot = 2
@@ -160,6 +160,7 @@ for estimator in ["classical", "ch", "dowd"]:
         other_outputs_df=bad_outputs_train_df,
         estimator=estimator,
         title=f"SF estimation ({estimator}, naive) error vs. lag and global sparsity",
+        y_axis_log=False,
     )
     plt.savefig(save_dir + f"error_lag_{estimator}_naive.png")
     plt.close()
@@ -170,6 +171,24 @@ for estimator in ["classical", "ch", "dowd"]:
         title=f"SF estimation ({estimator}, lint) error vs. lag and global sparsity",
     )
     plt.savefig(save_dir + f"error_lag_{estimator}_lint.png")
+    plt.close()
+
+    sf.plot_error_trend_line(
+        other_outputs_df=bad_outputs_train_df,
+        estimator=estimator,
+        title=f"SF estimation ({estimator}, naive) error vs. lag and global sparsity",
+        y_axis_log=True,
+    )
+    plt.savefig(save_dir + f"error_lag_{estimator}_naive_log.png")
+    plt.close()
+
+    sf.plot_error_trend_line(
+        other_outputs_df=interp_outputs_train_df,
+        estimator=estimator,
+        title=f"SF estimation ({estimator}, lint) error vs. lag and global sparsity",
+        y_axis_log=True,
+    )
+    plt.savefig(save_dir + f"error_lag_{estimator}_lint_log.png")
     plt.close()
 
 
@@ -664,47 +683,47 @@ print("\nCurrent time:", datetime.now())
 # df = pd.DataFrame(data)
 
 # Set the plot size
-plt.figure(figsize=(6, 4))
-plt.tight_layout()
+# plt.figure(figsize=(6, 4))
+# plt.tight_layout()
 
-# Create the bar plot
-sns.barplot(
-    data=df[df.Corrected == "No"],
-    x="Gap handling method",
-    y="MAPE on test set",
-    hue="Estimator",
-)
+# # Create the bar plot
+# sns.barplot(
+#     data=df[df.Corrected == "No"],
+#     x="Gap handling method",
+#     y="MAPE on test set",
+#     hue="Estimator",
+# )
 
-# Add title and labels
-plt.title("MAPE on Test Set by Estimator and Gap Handling Method")
-plt.xlabel("Gap handling method")
-plt.ylabel("MAPE on Test Set")
+# # Add title and labels
+# plt.title("MAPE on Test Set by Estimator and Gap Handling Method")
+# plt.xlabel("Gap handling method")
+# plt.ylabel("MAPE on Test Set")
 
-# Return the y-lims of the plot
-ymin, ymax = plt.ylim()
+# # Return the y-lims of the plot
+# ymin, ymax = plt.ylim()
 
-# Show the plot
-plt.show()
+# # Show the plot
+# plt.show()
 
-# Set the plot size
-plt.figure(figsize=(6, 4))
-plt.tight_layout()
-# Create the bar plot
-sns.barplot(
-    data=df[df.Corrected == "Yes"],
-    x="Dimensions",
-    y="MAPE on test set",
-    hue="Number of bins",
-    palette=sns.color_palette("Blues", 3),
-)
-# Make the color palette a set of 3 blues
+# # Set the plot size
+# plt.figure(figsize=(6, 4))
+# plt.tight_layout()
+# # Create the bar plot
+# sns.barplot(
+#     data=df[df.Corrected == "Yes"],
+#     x="Dimensions",
+#     y="MAPE on test set",
+#     hue="Number of bins",
+#     palette=sns.color_palette("Blues", 3),
+# )
+# # Make the color palette a set of 3 blues
 
 
-# Add title and labels
-plt.title("MAPE on Test Set using Classical LINT + Correction Factor")
-plt.xlabel("Dimensionality of correction factor")
-plt.ylabel("MAPE on Test Set")
-plt.ylim(ymin, ymax)  # Set the y-lims to be the same as the previous plot
+# # Add title and labels
+# plt.title("MAPE on Test Set using Classical LINT + Correction Factor")
+# plt.xlabel("Dimensionality of correction factor")
+# plt.ylabel("MAPE on Test Set")
+# plt.ylim(ymin, ymax)  # Set the y-lims to be the same as the previous plot
 
-# Show the plot
-plt.show()
+# # Show the plot
+# plt.show()

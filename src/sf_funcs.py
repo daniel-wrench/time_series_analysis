@@ -308,6 +308,7 @@ def plot_error_trend_line(
     other_outputs_df,
     estimator="classical",
     title="SF estimation error vs. lag and global sparsity",
+    y_axis_log=False,
 ):
     fig, ax = plt.subplots(figsize=(8, 4), tight_layout=True)
     plt.title(title)
@@ -316,16 +317,16 @@ def plot_error_trend_line(
         other_outputs_df["lag"],
         other_outputs_df[estimator + "_error_percent"],
         c=other_outputs_df["missing_prop_overall"],
-        s=0.08,
-        alpha=0.2,
+        s=0.03,
+        alpha=0.4,
         cmap="plasma",
     )
     median_error = other_outputs_df.groupby("Lag")[
         estimator + "_error_percent"
     ].median()
     mean_error = other_outputs_df.groupby("Lag")[estimator + "_error_percent"].mean()
-    plt.plot(median_error, color="black", lw=2, label="Median")
-    plt.plot(mean_error, color="C0", lw=2, label="Mean")
+    plt.plot(median_error, color="g", lw=3, label="Median")
+    plt.plot(mean_error, color="c", lw=3, label="Mean")
 
     plt.annotate(
         "MAPE = {0:.2f}".format(
@@ -343,12 +344,13 @@ def plot_error_trend_line(
     # Change range of color bar
     plt.hlines(0, 1, other_outputs_df.lag.max(), color="black", linestyle="--")
     plt.clim(0, 1)
-    plt.ylim(-120, 500)
+    plt.ylim(-2e2, 6e2)
     plt.semilogx()
-    plt.yscale("symlog")
+    if y_axis_log is True:
+        plt.yscale("symlog", linthresh=1e2)
     plt.xlabel("Lag ($\\tau$)")
     plt.ylabel("% error")
-    plt.legend(loc="upper right")
+    plt.legend(loc="lower left")
     # plt.show()
 
 
@@ -576,51 +578,50 @@ def compute_scaling(bad_output, var, heatmap_vals):
     """
     Extracting values from each bin to create a look-up table. Note that due to binning we have to find the nearest value to get the corresponding MAPE for a given lag and proportion of pairs remaining. Using MPE as we want to maintaing the direction of the error for compensating."""
     df = heatmap_vals
+
+    # Precompute scaling factors
+    df["scaling"] = 1 / (1 + df["MPE"] / 100)
+    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 2 * df["MPE_std_err"]) / 100)
+    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 2 * df["MPE_std_err"]) / 100)
+
+    # If no nearest bin is found (len(nearest_row)=0), scaling will be 1 (the same)
+    bad_output["scaling"] = 1
+    bad_output["scaling_lower"] = 1
+    bad_output["scaling_upper"] = 1
+
     for i, row in bad_output.iterrows():
         desired_prop = row[var]
         desired_lag = i[2]  # 3rd level of multi-index = lag
-        # Calculate absolute differences between desired Lag and all Lag values in the DataFrame
-        df["lag_diff"] = np.abs(df["Lag"] - desired_lag)
-        df["prop_diff"] = np.abs(df[var] - desired_prop)
 
-        # Find the row with the minimum absolute difference
-        nearest_row = df.loc[
-            (df["lag_diff"] == np.min(df["lag_diff"]))
-            & (df["prop_diff"] == np.min(df["prop_diff"]))
-        ]
+        # Compute absolute differences
+        lag_diff = np.abs(df["Lag"] - desired_lag)
+        prop_diff = np.abs(df[var] - desired_prop)
 
-        if len(nearest_row) > 1:
-            # print("More than one nearest bin found!")
-            result = nearest_row.head(1)
-            MPE = result["MPE"].values[0]
-            scaling = 1 / (1 + MPE / 100)
+        # Find the nearest row
+        min_lag_diff = lag_diff.min()
+        min_prop_diff = prop_diff.min()
+        nearest_row = df.loc[(lag_diff == min_lag_diff) & (prop_diff == min_prop_diff)]
 
-        elif len(nearest_row) == 0:
-            # print("No nearest bin found for lag {}! Scaling set to 1".format(i))
-            scaling = 1
-            std_err = 0
+        if len(nearest_row) == 0:
+            # print("No nearest bin found!")
+            continue
+
+        # elif len(nearest_row) > 1:
+        # print("More than one nearest bin found!")
+
         else:
             result = nearest_row.head(1)
-            MPE = result["MPE"].values[0]
-            scaling = 1 / (1 + MPE / 100)
-            std_err = result["MPE_std_err"].values[0]
-            scaling_lower = 1 / (1 + (MPE + 2 * std_err) / 100)
-            scaling_upper = 1 / (1 + (MPE - 2 * std_err) / 100)
+            scaling = result["scaling"].values[0]
+            scaling_lower = result["scaling_lower"].values[0]
+            scaling_upper = result["scaling_upper"].values[0]
 
-        bad_output.loc[i, "scaling"] = scaling
-        bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
-            1  # Catching 0 errors
-        )
-        bad_output.loc[i, "scaling_lower"] = scaling_lower
-        bad_output.loc[i, "scaling_upper"] = scaling_upper
+        bad_output.at[i, "scaling"] = scaling
+        bad_output.at[i, "scaling_lower"] = scaling_lower
+        bad_output.at[i, "scaling_upper"] = scaling_upper
 
-        # print("Desired lag: {}".format(desired_lag))
-        # print("Desired prop: {}".format(desired_prop))
-        # print("Nearest row:")
-        # print(nearest_row)
-
-    # Remove the diff rows as no longer needed
-    df.drop(columns=["lag_diff", "prop_diff"], inplace=True)
+    bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
+        1  # Catching rows where there is no error, so scaling should be 1
+    )
 
     bad_output["classical_corrected"] = bad_output["classical"] * bad_output["scaling"]
     bad_output["classical_corrected_lower"] = (
@@ -629,75 +630,86 @@ def compute_scaling(bad_output, var, heatmap_vals):
     bad_output["classical_corrected_upper"] = (
         bad_output["classical"] * bad_output["scaling_upper"]
     )
-
     # Smoothing potentially jumpy correction
-    bad_output["scaling_smoothed"] = (
-        bad_output["scaling"].rolling(window=20, min_periods=1).mean()
-    )
-    bad_output["classical_corrected_smoothed"] = (
-        bad_output["classical"] * bad_output["scaling_smoothed"]
-    )
-
+    # bad_output["scaling_smoothed"] = (
+    #     bad_output["scaling"].rolling(window=20, min_periods=1).mean()
+    # )
+    # bad_output["classical_corrected_smoothed"] = (
+    #     bad_output["classical"] * bad_output["scaling_smoothed"]
+    # )
     return bad_output
 
 
 def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear"):
     """
     Extracting values from each bin to create a look-up table. Note that due to binning we have to find the nearest value to get the corresponding MAPE for a given lag and proportion of pairs remaining. Using MPE as we want to maintaing the direction of the error for compensating."""
-    df = heatmap_vals  # NB: not using .copy() here so that the original df is modified
-    # this means we will have both the 3d and 2d corrections in the same df
+    df = heatmap_vals
+
+    # Precompute scaling factors
+    df["scaling"] = 1 / (1 + df["MPE"] / 100)
+    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 2 * df["MPE_std_err"]) / 100)
+    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 2 * df["MPE_std_err"]) / 100)
+
+    # If no nearest bin is found (len(nearest_row)=0), scaling will be 1 (the same)
+    bad_output["scaling"] = 1
+    bad_output["scaling_lower"] = 1
+    bad_output["scaling_upper"] = 1
+
     for i, row in bad_output.iterrows():
         desired_prop = row[var]
         desired_lag = i[2]  # 3rd level of multi-index = lag
         desired_classical = row["classical"]
-        # Calculate absolute differences between desired Lag and all Lag values in the DataFrame
-        df["lag_diff"] = np.abs(df["Lag"] - desired_lag)
-        df["prop_diff"] = np.abs(df[var] - desired_prop)
-        df["classical_diff"] = np.abs(df["classical"] - desired_classical)
 
-        # Find the row with the minimum absolute difference
+        # Compute absolute differences
+        lag_diff = np.abs(df["Lag"] - desired_lag)
+        prop_diff = np.abs(df[var] - desired_prop)
+        classical_diff = np.abs(df["classical"] - desired_classical)
+
+        # Find the nearest row
+        min_lag_diff = lag_diff.min()
+        min_prop_diff = prop_diff.min()
+        min_classical_diff = classical_diff.min()
         nearest_row = df.loc[
-            (df["lag_diff"] == np.min(df["lag_diff"]))
-            & (df["prop_diff"] == np.min(df["prop_diff"]))
-            & (df["classical_diff"] == np.min(df["classical_diff"]))
+            (lag_diff == min_lag_diff)
+            & (prop_diff == min_prop_diff)
+            & (classical_diff == min_classical_diff)
         ]
 
-        # print("Desired lag: {}".format(desired_lag))
-        # print("Desired prop: {}".format(desired_prop))
-        # print("Nearest row:")
-        # print(nearest_row)
+        if len(nearest_row) == 0:
+            # print("No nearest bin found!")
+            continue
 
-        if len(nearest_row) > 1:
-            # print("More than one nearest bin found!")
-            result = nearest_row.head(1)
-            MPE = result["MPE"].values[0]
-            scaling = 1 / (1 + MPE / 100)
+        # elif len(nearest_row) > 1:
+        # print("More than one nearest bin found!")
 
-        elif len(nearest_row) == 0:
-            # print("No nearest bin found for lag {}! Scaling set to 1".format(i))
-            scaling = 1
         else:
             result = nearest_row.head(1)
-            MPE = result["MPE"].values[0]
-            scaling = 1 / (1 + MPE / 100)
+            scaling = result["scaling"].values[0]
+            scaling_lower = result["scaling_lower"].values[0]
+            scaling_upper = result["scaling_upper"].values[0]
 
-        bad_output.loc[i, "scaling"] = scaling
-        bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
-            1  # Catching 0 errors
-        )
+        bad_output.at[i, "scaling"] = scaling
+        bad_output.at[i, "scaling_lower"] = scaling_lower
+        bad_output.at[i, "scaling_upper"] = scaling_upper
 
-    # Remove the diff rows as no longer needed
-    df.drop(columns=["lag_diff", "prop_diff", "classical_diff"], inplace=True)
+    bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
+        1  # Catching 0 errors
+    )
 
     bad_output["classical_corrected_3d"] = (
         bad_output["classical"] * bad_output["scaling"]
     )
+    bad_output["classical_corrected_lower"] = (
+        bad_output["classical"] * bad_output["scaling_lower"]
+    )
+    bad_output["classical_corrected_upper"] = (
+        bad_output["classical"] * bad_output["scaling_upper"]
+    )
     # Smoothing potentially jumpy correction
-    bad_output["scaling_smoothed"] = (
-        bad_output["scaling"].rolling(window=20, min_periods=1).mean()
-    )
-    bad_output["classical_corrected_smoothed"] = (
-        bad_output["classical"] * bad_output["scaling_smoothed"]
-    )
-
+    # bad_output["scaling_smoothed"] = (
+    #     bad_output["scaling"].rolling(window=20, min_periods=1).mean()
+    # )
+    # bad_output["classical_corrected_smoothed"] = (
+    #     bad_output["classical"] * bad_output["scaling_smoothed"]
+    # )
     return bad_output
