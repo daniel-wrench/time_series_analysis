@@ -300,7 +300,8 @@ for n_bins in [15]:
         interp_outputs_test_df, missing_measure, lookup_table
     )
     print(f"Correcting test set intervals using 3D error heatmap with {n_bins} bins")
-    test_set_corrected_3d = sf.compute_scaling_3d(
+    # Overriding with the version including the 3D scaling (as well as 2d) to save memory
+    test_set_corrected = sf.compute_scaling_3d(
         interp_outputs_test_df, missing_measure, lookup_table_3d
     )
 
@@ -311,7 +312,7 @@ for n_bins in [15]:
     for i, df in enumerate(good_outputs_test):
         for j in range(times_to_gap):
             key = (i, j)  # Checking bug issue here
-            if key not in test_set_corrected_3d.index:
+            if key not in test_set_corrected.index:
                 print(f"\nKey {key} not found in the MultiIndex")
             else:
                 error_2d = (
@@ -322,7 +323,7 @@ for n_bins in [15]:
                 error_percents_2d.append(error_percent_2d)
 
                 error_3d = (
-                    test_set_corrected_3d.loc[(i, j), "classical_corrected_3d"]
+                    test_set_corrected.loc[(i, j), "classical_corrected_3d"]
                     - df["classical"]
                 )
                 error_percent_3d = error_3d / df["classical"] * 100
