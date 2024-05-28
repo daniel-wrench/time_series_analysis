@@ -311,7 +311,7 @@ for n_bins in [15]:
     for i, df in enumerate(good_outputs_test):
         for j in range(times_to_gap):
             key = (i, j)  # Checking bug issue here
-            if key not in df.index:
+            if key not in test_set_corrected_3d.index:
                 print(f"\nKey {key} not found in the MultiIndex")
             else:
                 error_2d = (
