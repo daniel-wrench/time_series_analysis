@@ -310,19 +310,23 @@ for n_bins in [15]:
 
     for i, df in enumerate(good_outputs_test):
         for j in range(times_to_gap):
-            # Calculate difference
-            error_2d = (
-                test_set_corrected.loc[(i, j), "classical_corrected"] - df["classical"]
-            )
-            error_percent_2d = error_2d / df["classical"] * 100
-            error_percents_2d.append(error_percent_2d)
+            key = (i, j)  # Checking bug issue here
+            if key not in df.index:
+                print(f"\nKey {key} not found in the MultiIndex")
+            else:
+                error_2d = (
+                    test_set_corrected.loc[(i, j), "classical_corrected"]
+                    - df["classical"]
+                )
+                error_percent_2d = error_2d / df["classical"] * 100
+                error_percents_2d.append(error_percent_2d)
 
-            error_3d = (
-                test_set_corrected_3d.loc[(i, j), "classical_corrected_3d"]
-                - df["classical"]
-            )
-            error_percent_3d = error_3d / df["classical"] * 100
-            error_percents_3d.append(error_percent_3d)
+                error_3d = (
+                    test_set_corrected_3d.loc[(i, j), "classical_corrected_3d"]
+                    - df["classical"]
+                )
+                error_percent_3d = error_3d / df["classical"] * 100
+                error_percents_3d.append(error_percent_3d)
 
     print(
         "Mean MAPE of corrected interpolated intervals test set (classical, 2D, {0} bins) = {1:.2f}".format(
@@ -589,6 +593,7 @@ print("\nCurrent time:", datetime.now())
 
 # Plot bar plots of test set errors
 
+# LATEST: 50 x 1040 intervals
 
 # import seaborn as sns
 
@@ -665,13 +670,13 @@ print("\nCurrent time:", datetime.now())
 #         "3D",
 #     ],
 #     "MAPE on test set": [
-#         19.3,
-#         12.2,
-#         24.1,
-#         14.4,
-#         34.2,
-#         19.6,
-#         12.3,
+#         21.4,
+#         14.0,
+#         25.7,
+#         16.6,
+#         36.4,
+#         22.3,
+#         12.3, BELOW TO BE UPDATED
 #         12.2,
 #         12.2,
 #         10.7,
