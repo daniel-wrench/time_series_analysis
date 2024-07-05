@@ -87,12 +87,12 @@ def compute_sf(data, lags, powers=[2], retain_increments=False):
     return df
 
 
-def get_lag_vals_list(df):
-    lag_vals_wide = pd.DataFrame(df["sq_diffs"].tolist(), index=df.index)
+def get_lag_vals_list(df, value_name="sq_diffs"):
+    lag_vals_wide = pd.DataFrame(df[value_name].tolist(), index=df.index)
     lag_vals_wide.reset_index(inplace=True)  # Make the index a column
     lag_vals_wide.rename(columns={"index": "lag"}, inplace=True)
     lag_vals = pd.melt(
-        lag_vals_wide, id_vars=["lag"], var_name="index", value_name="sq_diffs"
+        lag_vals_wide, id_vars=["lag"], var_name="index", value_name=value_name
     )
     return lag_vals
 
@@ -105,7 +105,7 @@ def plot_sample(
     input_ind=0,
     input_versions=3,  # Either number of versions to plot or a list of versions to plot
     linear=True,
-    # estimator="classical",  # classical, ch, dowd
+    estimator_list=["classical"],  # classical, ch, dowd
     title="SF estimation subject to missing data",
 ):
     if linear is False:
@@ -116,12 +116,24 @@ def plot_sample(
     # Check if n is an integer
     if not isinstance(input_versions, int):
         n = len(input_versions)
-        fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 3))
+        fig, ax = plt.subplots(
+            n,
+            ncols,
+            figsize=(ncols * 5, n * 3),
+            sharex="col",
+            gridspec_kw={"hspace": 0},
+        )
         other_inputs_plot = [other_inputs[input_ind][i] for i in input_versions]
         other_outputs_plot = [other_outputs[input_ind][i] for i in input_versions]
     else:
         n = input_versions
-        fig, ax = plt.subplots(n, ncols, figsize=(ncols * 5, n * 4))
+        fig, ax = plt.subplots(
+            n,
+            ncols,
+            figsize=(ncols * 5, n * 3),
+            sharex="col",
+            gridspec_kw={"hspace": 0},
+        )
         # Before plotting, sort the n bad inputs by missing proportion
         other_inputs_plot = other_inputs[input_ind][:n]
         other_outputs_plot = other_outputs[input_ind][:n]
@@ -134,8 +146,8 @@ def plot_sample(
     sorted_lists = zip(*sorted(zip(sparsities, other_outputs_plot)))
     sparsities_ordered, other_outputs_plot = sorted_lists
 
-    ax[0, 0].set_title("Input time series")
-    ax[0, ncols - 2].set_title("SF$_2$ (log axes)")
+    ax[0, 0].set_title("Interpolated time series")
+    ax[0, ncols - 2].set_title("$S_2(\\tau)$")
     ax[0, ncols - 1].set_title("Estimation error")
 
     for i in range(n):
@@ -158,7 +170,7 @@ def plot_sample(
 
         colors = ["C0", "darkred", "olivedrab"]
         pos_y = [0.9, 0.8, 0.7]
-        for est_ind, estimator in enumerate(["classical", "ch", "dowd"]):
+        for est_ind, estimator in enumerate(estimator_list):
             mape = other_outputs_plot[i][estimator + "_error_percent"].abs().mean()
 
             ax[i, 1].annotate(
@@ -276,12 +288,12 @@ def plot_sample(
     for i in range(1, ncols):
         ax[n - 1, i].set_xlabel("Lag ($\\tau$)")
     # Remove x-axis labels for all but the bottom row
-    for i in range(n):
-        for j in range(ncols):
-            if i < n:
-                ax[i, j].set_xticklabels([])
+    # for i in range(n):
+    #     for j in range(ncols):
+    #         if i < n:
+    #             ax[i, j].set_xticklabels([])
 
-    ax[0, ncols - 1].axhline(0, color="black", linestyle="--")
+    # ax[0, ncols - 1].axhline(0, color="black", linestyle="--")
     ax[0, ncols - 1].semilogx()
     ax[0, 1].legend(loc="lower right", frameon=True)
 
@@ -291,15 +303,15 @@ def plot_sample(
         xycoords="axes fraction",
         xytext=(0.05, 0.9),
         textcoords="axes fraction",
-        transform=ax[i, 0].transAxes,
+        transform=ax[0, 2].transAxes,
         bbox=dict(facecolor="white", edgecolor="grey", boxstyle="round", alpha=0.5),
     )
 
     if linear is True:
-        ax[0, 1].set_title("SF$_2$" + suffix)
+        ax[0, 1].set_title("$S_2(\\tau)$" + suffix)
 
     # Add overall title
-    fig.suptitle(title, size=16)
+    # fig.suptitle(title, size=16)
 
     # plt.show()
 

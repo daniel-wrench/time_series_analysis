@@ -531,7 +531,7 @@ def compute_nd_acf(time_series, nlags, plot=False):
         acf /= 3
 
     elif np_array.shape[0] == 1:
-        acf = sm.tsa.acf(np_array[0], fft=True, nlags=nlags)
+        acf = sm.tsa.acf(np_array[0], fft=True, nlags=nlags, missing="conservative")
 
     else:
         raise ValueError(
