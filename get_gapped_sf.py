@@ -1,8 +1,8 @@
-# SF error analysis
-# ### Semi-empirical approach to computing second-order statistics of gapped series
-#
-# Statistical moments of increments.
-# $$D_p(\tau)=\langle | x(t+\tau)-x(t))^p | \rangle$$
+# Gapping standardised intervals and calculating structure functions
+
+# Note local vs. HPC code options throughout: comment and uncomment as needed
+
+### DEPENDENCY AND PARALLEL SET-UP ###
 
 import glob
 import pickle
@@ -45,20 +45,20 @@ except ImportError:
     rank = comm.Get_rank()
     status = None
 
-# ## Load in the data
-# A magnetic field time series from PSP
+
+# LOAD DATA
 
 # Get list of files in psp directory and split between cores
-# (if running in parallel)
-# raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
-raw_file_list = sorted(
-    #      glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
-    glob.iglob(
-        "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
-        + "/*.cdf"
-    )
-)  # HPC
+raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
+# raw_file_list = sorted(
+#     #      glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
+#     glob.iglob(
+#         "/nfs/scratch/wrenchdani/time_series_analysis/data/raw/psp/fields/l2/mag_rtn/2019/"
+#         + "/*.cdf"
+#     )
+# )  # HPC
 
+# SET DESIRED NUMBER OF FILES HERE
 file_list_split = np.array_split(raw_file_list[:200], size)
 
 # Broadcast the list of files to all cores
@@ -112,23 +112,21 @@ df_raw = psp_df["B_R"]
 
 ### 0PTIONAL CODE END ###
 
-# ## Standardise each interval to contain 8 correlation times
-
-
-# Original freq is 0.007s. Resampling to less rapid but still sufficiently high cadence, then splitting into chunks with ~15 correlation times
+# Standardise each interval to contain 8 correlation times
+# Original freq is 0.007s. Resampling to less rapid but still sufficiently high cadence,
+# then splitting into chunks with ~15 correlation times
 
 tce_approx = 500  # s
 tce_approx_n = 15
 cadence_approx = 0.1  # s
 
-tce_n = 8  # Number of correlation times we want...
+tce_n = 8  # Number of actual (computed) correlation times we want in our standardised interval...
 interval_length = 1000  # ...across this many points
-good_inputs_list = []
 
 df = df_raw.resample(str(cadence_approx) + "S").mean()
 interval_length_approx = int(tce_approx * tce_approx_n / cadence_approx)
 
-# We have approximately 10 correlation times in 10,000 points. Let's now be more precise, and calculate the correlation time from each chunk
+# We have approximately 15 correlation times in 10,000 points. Let's now be more precise, and calculate the correlation time from each chunk
 
 # Split df into subsets
 
@@ -138,6 +136,8 @@ interval_list_approx = [
 ]
 
 del df  # free up memory
+
+good_inputs_list = []
 
 for interval_approx in interval_list_approx:
     time_lags_lr, r_vec_lr = utils.compute_nd_acf(
@@ -189,8 +189,8 @@ for interval_approx in interval_list_approx:
         continue
 
 if len(good_inputs_list) == 0:
-   print("No good inputs found (good_inputs_list is empty). Exiting.")
-   exit(1)
+    print("No good inputs found (good_inputs_list is empty). Exiting.")
+    exit(1)
 
 print(
     "\nNumber of standardised intervals: " + str(len(good_inputs_list))
@@ -304,8 +304,8 @@ list_of_list_of_dfs = [
 ]
 
 with open(
-    # f"data/processed/sfs_psp_core_{rank}.pkl",
-    "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(rank),
+    f"data/processed/sfs_psp_core_{rank}.pkl",
+    # "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(rank),
     "wb",
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
