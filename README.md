@@ -7,18 +7,33 @@ Run flipbook code to get all spectral stats for a given time series
 Plot those stats
 
 ## `3_plot_lag_stats.py`
-Plot the 3 estimators for a given interval, then plot the tau-scattergrams and PDFs for 3 specific lags.
+Plot the 3 SF estimators for a given interval, then plot the tau-scattergrams and PDFs for 3 specific lags.
 
 ## `get_gapped_sf.py` (Rāpoi job)
-Gap and calculate SFs for a lot of time series
+Gap and calculate SFs for a lot of time series. Needs to run on PSP data (training and test set) and Wind data (external test set: much smaller)
+*Currently two documents*
 
 ## `plot_results.py` (Rāpoi local job)
-Calculate heatmaps, apply correction factors to test set, and produce plots of these results 
+Calculate heatmaps, apply correction factors to test set, and produce plots of these results.
+*Currently two documents*
+
+Apply correction factor `compute_scaling()` on both test sets
 
 (Add Wind in here)
 
 ## `sf_funcs_demo.ipynb` 
-Demonstration on small datset of entire pipeline
+Demonstration on small dataset of pre-processing of data and gathering results (not the gapping part)
+
+## WIND UPDATE
+- RE-RUNNING LOCAL CODES ON EXISTING PSP CODE
+-- get_gapped: good
+-- plot_results: good (pending updates to plotting results, 3d heatmaps, overlaying traces, etc.)
+- Get Wind pkl from Reynolds work
+-- HR version. 2016-01-02 had long corr length so difficult to standardise. 01-04 is better, but still just gives us one interval of 8 lengths. Therefore, we need a week's worth to have a few to test the correction on. To get this, compare Re processing to PSP processing and update accordingly: because Re work outputs each file separately, rather than merging them together, which this work does do. *Run interactively in a new script*
+- Read into get_gapped_sf, run interactively to check standardisation
+- Run remainder of code
+
+I will need to run whole pipeline on Wind data, but it will be much smaller, and it will use the PSP correction factor. In plot_results, we will not run create_heatmap_lookup() for Wind, and will instead use the PSP lookup table as an argument to compute_scaling()
 
 ## TO-DO
 - Add PDF, mean, rms to calc_scales_stats?

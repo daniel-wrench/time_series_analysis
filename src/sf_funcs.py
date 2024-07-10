@@ -593,8 +593,8 @@ def compute_scaling(bad_output, var, heatmap_vals):
 
     # Precompute scaling factors
     df["scaling"] = 1 / (1 + df["MPE"] / 100)
-    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 2 * df["MPE_std_err"]) / 100)
-    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 2 * df["MPE_std_err"]) / 100)
+    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 3 * df["MPE_std_err"]) / 100)
+    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 3 * df["MPE_std_err"]) / 100)
 
     # If no nearest bin is found (len(nearest_row)=0), scaling will be 1 (the same)
     bad_output["scaling"] = 1
@@ -659,8 +659,8 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
 
     # Precompute scaling factors
     df["scaling"] = 1 / (1 + df["MPE"] / 100)
-    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 2 * df["MPE_std_err"]) / 100)
-    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 2 * df["MPE_std_err"]) / 100)
+    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 3 * df["MPE_std_err"]) / 100)
+    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 3 * df["MPE_std_err"]) / 100)
 
     # If no nearest bin is found (len(nearest_row)=0), scaling will be 1 (the same)
     bad_output["scaling"] = 1
@@ -711,10 +711,10 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
     bad_output["classical_corrected_3d"] = (
         bad_output["classical"] * bad_output["scaling"]
     )
-    bad_output["classical_corrected_lower"] = (
+    bad_output["classical_corrected_3d_lower"] = (
         bad_output["classical"] * bad_output["scaling_lower"]
     )
-    bad_output["classical_corrected_upper"] = (
+    bad_output["classical_corrected_3d_upper"] = (
         bad_output["classical"] * bad_output["scaling_upper"]
     )
     # Smoothing potentially jumpy correction
