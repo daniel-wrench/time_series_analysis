@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import src.sf_funcs as sf
 import pickle
 from sklearn.model_selection import train_test_split
+from matplotlib.gridspec import GridSpec
+
 
 from datetime import datetime
 
@@ -82,7 +84,7 @@ times_to_gap = len(bad_inputs_test[0])
 #     f"Number of training interval: {len(good_inputs_train)} x {times_to_gap} = {len(good_inputs_train)*len(bad_inputs_train[0])}"
 # )
 print(
-    f"Number of test intervals: {len(good_inputs_test)} x {times_to_gap} = {len(good_inputs_test)*len(bad_inputs_test[0])}"
+    f"Number of Wind test intervals: {len(good_inputs_test)} x {times_to_gap} = {len(good_inputs_test)*len(bad_inputs_test[0])}"
 )
 
 print("Now plotting figures.")
@@ -131,8 +133,6 @@ def concat_dfs(lst_of_list_of_dfs):
     return merged_df
 
 
-# bad_outputs_train_df = concat_dfs(bad_outputs_train)
-# interp_outputs_train_df = concat_dfs(interp_outputs_train)
 bad_outputs_test_df = concat_dfs(bad_outputs_test)
 interp_outputs_test_df = concat_dfs(interp_outputs_test)
 
@@ -157,6 +157,31 @@ def plot_average_errors(df):
     plt.plot(stats["50%"], lw=3, label="Median % error")
     plt.semilogx()
     plt.legend()
+
+
+# Annotate each heatmap trace with info
+def annotate_curve(ax, x, y, text, offset_scaling=(0.3, 0.1)):
+    # Find the index of y value closest to the median value
+    idx = np.argmin(np.abs(y - np.percentile(y, 20)))
+
+    # Coordinates of the point of maximum y value
+    x_max = x[idx]
+    y_max = y[idx]
+
+    # Convert offset from axes fraction to data coordinates
+    x_text = 10 ** (offset_scaling[0] * np.log10(x_max))  # Log-axis
+    y_text = y_max + offset_scaling[1] * (ax.get_ylim()[1] - ax.get_ylim()[0])
+
+    # Annotate with the text, adjusting the position with xytext_offset
+    ax.annotate(
+        text,
+        xy=(x_max, y_max - 1),
+        xytext=(x_text, y_text),
+        # xycoords="axes fraction",
+        # textcoords="axes fraction",
+        arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"),
+        bbox=dict(facecolor="white", edgecolor="white", boxstyle="round", alpha=0.7),
+    )
 
 
 for n_bins in [15]:
@@ -203,20 +228,26 @@ for n_bins in [15]:
                 error_percents_3d.append(error_percent_3d)
 
     print(
-        "Mean MAPE of corrected interpolated intervals external test set (classical, 2D, {0} bins) = {1:.2f}".format(
+        "Mean MAPE of corrected interpolated intervals in external test set (classical, 2D, {0} bins) = {1:.2f}".format(
             n_bins, np.mean(np.abs(error_percents_2d))
         )
     )
     print(
-        "Mean MAPE of corrected interpolated intervals external test set (classical, 3D, {0} bins) = {1:.2f}".format(
+        "Mean MAPE of corrected interpolated intervals in external test set (classical, 3D, {0} bins) = {1:.2f}".format(
             n_bins, np.mean(np.abs(error_percents_3d))
         )
     )
 
     for input_ind in range(n_ints_to_plot):
-        fig, axs = plt.subplots(
-            n_versions_to_plot, 2, figsize=(10, 4 * n_versions_to_plot)
-        )
+        fig = plt.figure(figsize=(12, 4))
+
+        # Create a GridSpec layout with specified width ratios and horizontal space
+        gs1 = GridSpec(1, 1, left=0.06, right=0.35)
+        gs2 = GridSpec(1, 2, left=0.43, right=0.99, wspace=0)
+
+        # Create subplots
+        ax0 = fig.add_subplot(gs1[0, 0])
+        ax1 = fig.add_subplot(gs2[0, 0])
 
         # Get the relevent indices in order of sparsity for better plot aesthetics
         versions_ordered_sparsity = (
@@ -247,69 +278,44 @@ for n_bins in [15]:
                     .mean()
                 )
 
-                axs[i, 1].annotate(
-                    "MAPE = {:.2f}".format(mape_corrected),
-                    xy=(1, 1),
-                    xycoords="axes fraction",
-                    xytext=(0.05, 0.8),
-                    textcoords="axes fraction",
-                    transform=axs[i, 1].transAxes,
-                    c="blue",
-                    bbox=dict(facecolor="white", edgecolor="white", boxstyle="round"),
-                )
-
-                axs[i, 1].annotate(
-                    "MAPE = {:.2f}".format(mape_corrected_3d),
-                    xy=(1, 1),
-                    xycoords="axes fraction",
-                    xytext=(0.05, 0.7),
-                    textcoords="axes fraction",
-                    transform=axs[i, 1].transAxes,
-                    c="purple",
-                    bbox=dict(facecolor="white", edgecolor="white", boxstyle="round"),
-                )
-
             except IndexError:
                 print(
                     f"IndexError with finding error to annotate plot: input_ind={input_ind}, int_version={int_version}, times_to_gap={times_to_gap}"
                 )
-            axs[i, 1].annotate(
-                "MAPE = {:.2f}".format(mape_bad),
-                xy=(1, 1),
-                xycoords="axes fraction",
-                xytext=(0.05, 0.9),
-                textcoords="axes fraction",
-                transform=axs[i, 1].transAxes,
-                c="black",
-                bbox=dict(facecolor="white", edgecolor="white", boxstyle="round"),
-            )
 
-            axs[i, 1].plot(
+            if i == 0:
+                ax = ax1
+                ax.set_ylabel("SF")
+            else:
+                ax = fig.add_subplot(gs2[0, i], sharey=ax1)
+                plt.setp(ax.get_yticklabels(), visible=False)
+
+            ax.plot(
                 good_outputs_test[input_ind]["classical"],
                 color="black",
-                label="True (classical)",
+                label="True",
                 lw=3,
                 alpha=0.5,
             )
-            axs[i, 1].plot(
+            ax.plot(
                 interp_outputs_test_df.loc[input_ind, int_version]["classical"],
                 color="black",
                 lw=1,
-                label="Interp. (classical)",
+                label="Interpolated ({:.2f})".format(mape_bad),
             )
-            # axs[i, 1].plot(
+            # axs[i+1].plot(
             #     sf_corrected["classical"] * sf_corrected["scaling"], c="blue", label="Corrected Bad"
             # )
-            axs[i, 1].plot(
+            ax.plot(
                 interp_outputs_test_df.loc[input_ind, int_version][
                     "classical_corrected"
                 ],
                 c="blue",
                 lw=1.2,
                 ls=":",
-                label="Interp. corr. (2D) $\pm$3SE",
+                label="2D corrected ({:.2f})".format(mape_corrected),
             )
-            axs[i, 1].fill_between(
+            ax.fill_between(
                 interp_outputs_test_df.loc[input_ind, int_version]["lag"],
                 interp_outputs_test_df.loc[input_ind, int_version][
                     "classical_corrected_lower"
@@ -320,21 +326,17 @@ for n_bins in [15]:
                 color="blue",
                 alpha=0.2,
             )
-            #    axs[i, 1].plot(
-            #        sf_corrected["classical_corrected_smoothed"],
-            #        c="orange",
-            #        label="Corrected Bad Smoothed",
-            #    )
-            axs[i, 1].plot(
+
+            ax.plot(
                 interp_outputs_test_df.loc[input_ind, int_version][
                     "classical_corrected_3d"
                 ],
                 c="purple",
                 ls=":",
                 lw=1.2,
-                label="Interp. corrected. (3D) $\pm$3SE",
+                label="3D corrected ({:.2f})".format(mape_corrected_3d),
             )
-            axs[i, 1].fill_between(
+            ax.fill_between(
                 interp_outputs_test_df.loc[input_ind, int_version]["lag"],
                 interp_outputs_test_df.loc[input_ind, int_version][
                     "classical_corrected_3d_lower"
@@ -346,51 +348,69 @@ for n_bins in [15]:
                 alpha=0.2,
             )
 
-            axs[i, 1].semilogx()
-            axs[i, 1].semilogy()
-            axs[i, 1].set_ylim(1e-2, 1e1)
-            axs[i, 1].legend(loc="lower right")
+            ax.semilogx()
+            ax.semilogy()
+            ax.set_ylim(1e-2, 1e1)
+            ax.legend(loc="lower right")
 
             # if log is True:
-            c = axs[i, 0].pcolormesh(
+            c = ax0.pcolormesh(
                 heatmap_bin_edges[0],
                 heatmap_bin_edges[1] * 100,  # convert to % Missing
                 heatmap_bin_vals.T,
                 cmap="bwr",
             )
-            # fig.colorbar(c, ax=axs[i, 0], label="MPE")
+            # fig.colorbar(c, ax=ax0, label="MPE")
             c.set_clim(-100, 100)
             c.set_facecolor("black")
-            # axs[i, 0].set_xlabel("Lag")
-            axs[i, 0].plot(
+            # ax0.set_xlabel("Lag")
+            ax0.plot(
                 interp_outputs_test_df.loc[input_ind, int_version]["lag"],
                 interp_outputs_test_df.loc[input_ind, int_version][missing_measure]
                 * 100,
                 c="black",
             )
-
-            axs[i, 0].set_xscale("log")
-            axs[i, 0].set_ylim(0, 100)
-            # axs[i, 0] = sf.plot_heatmap(
+            alphabet = "abcdefghijklmnopqrstuvwxyz"
+            annotate_curve(
+                ax0,
+                interp_outputs_test_df.loc[input_ind, int_version]["lag"],
+                interp_outputs_test_df.loc[input_ind, int_version][missing_measure]
+                * 100,
+                f"{alphabet[i]}",
+                offset_scaling=(0.8, -0.3),
+            )
+            ax.annotate(
+                f"{alphabet[i]}: {interp_outputs_test_df.loc[input_ind, int_version]['missing_prop_overall'].mean()*100:.1f}% missing overall",
+                xy=(1, 1),
+                xycoords="axes fraction",
+                xytext=(0.1, 0.9),
+                textcoords="axes fraction",
+                transform=ax.transAxes,
+                c="black",
+                fontsize=12,
+                bbox=dict(facecolor="lightgrey", edgecolor="white", boxstyle="round"),
+            )
+            ax.set_xlabel("Lag ($\\tau$)")
+            # ax0 = sf.plot_heatmap(
             #     heatmap_bin_vals_log,
             #     heatmap_bin_edges_log,
             #     missing_measure=missing_measure,
             #     log=True,
             #     overlay_x=df_to_plot["lag"],
             #     overlay_y=df_to_plot[missing_measure],
-            #     subplot=axs[i, 0],
+            #     subplot=ax0,
             # )
-        axs[0, 1].set_title("Applying correction factor")
-        axs[0, 0].set_title("Extracting correction factor")
-        axs[n_versions_to_plot - 1, 0].set_xlabel("Lag ($\\tau$)")
-        axs[n_versions_to_plot - 1, 1].set_xlabel("Lag ($\\tau$)")
-        axs[0, 0].set_ylabel("% pairs missing")
-        fig.suptitle(
-            "Applying correction factor to interpolated SFs in test set", size=16
-        )
+        # axs[0, 1].set_title("Applying correction factor")
+        # axs[0, 0].set_title("Extracting correction factor")
+        # axs[n_versions_to_plot - 1, 0].set_xlabel("Lag ($\\tau$)")
+        ax0.set_xlabel("Lag ($\\tau$)")
+        ax0.set_ylabel("% pairs missing")
+        ax0.set_xscale("log")
+        ax0.set_ylim(0, 100)
+        plt.subplots_adjust(bottom=0.2)
         plt.savefig(
             save_dir
-            + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d_wind.png"
+            + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d_external.png"
         )
         plt.close()
 
