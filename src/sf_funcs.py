@@ -440,6 +440,8 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
     xidx = np.digitize(x, xedges) - 1  # correcting for annoying 1-indexing
     yidx = np.digitize(y, yedges) - 1  # as above
     means = np.full((num_bins, num_bins), fill_value=np.nan)
+    upper = np.full((num_bins, num_bins), fill_value=np.nan)
+    lower = np.full((num_bins, num_bins), fill_value=np.nan)
     for i in range(num_bins):
         for j in range(num_bins):
             # If there are any values, calculate the mean for that bin
@@ -456,13 +458,17 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
                 ) / np.sqrt(
                     len(inputs["classical_error_percent"][(xidx == i) & (yidx == j)])
                 )
+
+                upper[i, j] = lag_prop_mean + 3 * lag_prop_std_err
+                lower[i, j] = lag_prop_mean - 3 * lag_prop_std_err
+
                 # Save values at midpoint of each bin
                 data["Lag"].append(0.5 * (xedges[i] + xedges[i + 1]))
                 data[missing_measure].append(0.5 * (yedges[j] + yedges[j + 1]))
                 data["MPE"].append(lag_prop_mean)
                 data["MPE_std_err"].append(lag_prop_std_err)
 
-    return means, [xedges, yedges], pd.DataFrame(data)
+    return means, lower, upper, [xedges, yedges], pd.DataFrame(data)
 
 
 def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
