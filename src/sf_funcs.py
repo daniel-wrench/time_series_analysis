@@ -440,8 +440,8 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
     xidx = np.digitize(x, xedges) - 1  # correcting for annoying 1-indexing
     yidx = np.digitize(y, yedges) - 1  # as above
     means = np.full((num_bins, num_bins), fill_value=np.nan)
-    upper = np.full((num_bins, num_bins), fill_value=np.nan)
-    lower = np.full((num_bins, num_bins), fill_value=np.nan)
+    # upper = np.full((num_bins, num_bins), fill_value=np.nan)
+    # lower = np.full((num_bins, num_bins), fill_value=np.nan)
     for i in range(num_bins):
         for j in range(num_bins):
             # If there are any values, calculate the mean for that bin
@@ -459,8 +459,8 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
                     len(inputs["classical_error_percent"][(xidx == i) & (yidx == j)])
                 )
 
-                upper[i, j] = lag_prop_mean + 3 * lag_prop_std_err
-                lower[i, j] = lag_prop_mean - 3 * lag_prop_std_err
+                # upper[i, j] = lag_prop_mean + 3 * lag_prop_std_err
+                # lower[i, j] = lag_prop_mean - 3 * lag_prop_std_err
 
                 # Save values at midpoint of each bin
                 data["Lag"].append(0.5 * (xedges[i] + xedges[i + 1]))
@@ -468,7 +468,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
                 data["MPE"].append(lag_prop_mean)
                 data["MPE_std_err"].append(lag_prop_std_err)
 
-    return means, lower, upper, [xedges, yedges], pd.DataFrame(data)
+    return means, [xedges, yedges], pd.DataFrame(data)
 
 
 def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
@@ -594,7 +594,8 @@ def plot_heatmap(
 
 def compute_scaling(bad_output, var, heatmap_vals):
     """
-    Extracting values from each bin to create a look-up table. Note that due to binning we have to find the nearest value to get the corresponding MAPE for a given lag and proportion of pairs remaining. Using MPE as we want to maintaing the direction of the error for compensating."""
+    Extracting values from each bin to create a look-up table. Note that due to binning we have to find the nearest value to get the corresponding MAPE for a given lag and proportion of pairs remaining. Using MPE as we want to maintaing the direction of the error for compensating.
+    """
     df = heatmap_vals
 
     # Precompute scaling factors
@@ -612,26 +613,29 @@ def compute_scaling(bad_output, var, heatmap_vals):
         desired_lag = i[2]  # 3rd level of multi-index = lag
 
         # Compute absolute differences
-        lag_diff = np.abs(df["Lag"] - desired_lag)
-        prop_diff = np.abs(df[var] - desired_prop)
+        # Using numpy arrays for speedup
 
-        # Find the nearest row
-        min_lag_diff = lag_diff.min()
-        min_prop_diff = prop_diff.min()
-        nearest_row = df.loc[(lag_diff == min_lag_diff) & (prop_diff == min_prop_diff)]
+        lag_diff = np.abs(df["Lag"].to_numpy() - desired_lag)
+        prop_diff = np.abs(df[var].to_numpy() - desired_prop)
+
+        # Find the nearest row in Eucledian space
+        # (note different scaling for lag and prop, but should be OK)
+        combined_distance = np.sqrt(lag_diff**2 + prop_diff**2)
+        # Get index of minimum value of the array
+        nearest_index = np.argmin(
+            combined_distance
+        )  # Will pick first if multiple minima
+        nearest_row = df.loc[nearest_index]
 
         if len(nearest_row) == 0:
-            # print("No nearest bin found!")
+            print("No nearest bin found!")
             continue
 
-        # elif len(nearest_row) > 1:
-        # print("More than one nearest bin found!")
-
         else:
-            result = nearest_row.head(1)
-            scaling = result["scaling"].values[0]
-            scaling_lower = result["scaling_lower"].values[0]
-            scaling_upper = result["scaling_upper"].values[0]
+            result = nearest_row
+            scaling = result["scaling"]
+            scaling_lower = result["scaling_lower"]
+            scaling_upper = result["scaling_upper"]
 
         bad_output.at[i, "scaling"] = scaling
         bad_output.at[i, "scaling_lower"] = scaling_lower

@@ -236,8 +236,7 @@ def annotate_curve(ax, x, y, text, offset_scaling=(0.3, 0.1)):
 
 for n_bins in [15]:
     # First with no interpolation
-    print(f"Calculating 2D heatmap with {n_bins} bins")
-    heatmap_bin_vals_log_bad, _, _, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
+    heatmap_bin_vals_log_bad, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
         sf.create_heatmap_lookup(
             bad_outputs_train_df, missing_measure, n_bins, log=True
         )
@@ -261,11 +260,9 @@ for n_bins in [15]:
     plt.close()
 
     # Now with linear interpolation
-    print(f"Calculating 3D heatmap with {n_bins} bins")
+    print(f"Calculating 2D heatmap with {n_bins} bins")
     (
-        heatmap_bin_vals_mean,
-        heatmap_bin_vals_lower,
-        heatmap_bin_vals_upper,
+        heatmap_bin_vals,
         heatmap_bin_edges,
         lookup_table,
     ) = sf.create_heatmap_lookup(
@@ -277,13 +274,8 @@ for n_bins in [15]:
 
     # Export the mean heatmap_bin_vals and heatmap_bin_edges together as a pickle
     with open(save_dir + f"error_heatmap_b_{n_bins}.pkl", "wb") as file:
-        pickle.dump((heatmap_bin_vals_mean, heatmap_bin_edges), file)
+        pickle.dump((heatmap_bin_vals, heatmap_bin_edges), file)
 
-    for heatmap_bin_vals in [
-        heatmap_bin_vals_mean,
-        heatmap_bin_vals_lower,
-        heatmap_bin_vals_upper,
-    ]:
         fig, ax = plt.subplots(figsize=(7, 5))
         plt.pcolormesh(
             heatmap_bin_edges[0],
@@ -298,14 +290,7 @@ for n_bins in [15]:
         plt.title("Distribution of missing proportion and lag")
         ax.set_facecolor("black")
         ax.set_xscale("log")
-        # Choose filename depending on suffix of heatmap_bin_vals
-        if heatmap_bin_vals is heatmap_bin_vals_mean:
-            suffix = "mean"
-        elif heatmap_bin_vals is heatmap_bin_vals_lower:
-            suffix = "lower"
-        elif heatmap_bin_vals is heatmap_bin_vals_upper:
-            suffix = "upper"
-        plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d_{suffix}.png")
+        plt.savefig(save_dir + f"error_heatmap_b_{n_bins}_2d.png")
         plt.close()
 
     fig, ax = plt.subplots(figsize=(7, 5))
@@ -554,7 +539,6 @@ for n_bins in [15]:
         plt.savefig(
             save_dir + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d.png"
         )
-        plt.show()
 
 # Plotting 3D heatmaps
 
