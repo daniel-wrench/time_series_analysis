@@ -4,7 +4,6 @@
 
 ### DEPENDENCY AND PARALLEL SET-UP ###
 
-import glob
 import pickle
 import pandas as pd
 import numpy as np
@@ -13,43 +12,17 @@ import src.utils as utils  # copied directly from Reynolds project, normalize() 
 import src.sf_funcs as sf
 import sys
 import src.data_import_funcs as dif
-
-# Setting up parallel processing (or not, if running locally)
-try:
-    from mpi4py import MPI
-
-    comm = MPI.COMM_WORLD
-    size = comm.Get_size()
-    rank = comm.Get_rank()
-    status = MPI.Status()
-
-except ImportError:
-    # Set default/empty single-process values if MPI is not available
-    print("MPI not available, running in single-process mode.")
-
-    class DummyComm:
-        def Get_size(self):
-            return 1
-
-        def Get_rank(self):
-            return 0
-
-        def Barrier(self):
-            pass
-
-        def bcast(self, data, root=0):
-            return data
-
-    comm = DummyComm()
-    size = comm.Get_size()
-    rank = comm.Get_rank()
-    status = None
-
+import json
 
 # LOAD DATA
 
 # Get list of files in psp directory and split between cores
-raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
+core = 0  # sys.argv[1]
+input_file_list_path = "input_file_lists/input_files_core_0.json"  # sys.argv[2]
+
+# Load the list of input files from the JSON file
+with open(input_file_list_path, "r") as f:
+    file_list = json.load(f)
 # raw_file_list = sorted(
 #     #      glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
 #     glob.iglob(
@@ -58,16 +31,10 @@ raw_file_list = sorted(glob.iglob("data/raw/psp/" + "/*.cdf"))  # LOCAL
 #     )
 # )  # HPC
 
-# SET DESIRED NUMBER OF FILES HERE
-file_list_split = np.array_split(raw_file_list[:200], size)
-
-# Broadcast the list of files to all cores
-file_list_split = comm.bcast(file_list_split, root=0)
-
 # For each core, load in the data from the files assigned to that core
-print("Core ", rank, "reading data")
+print("Core ", core, "reading data")
 psp_data = dif.read_cdfs(
-    file_list_split[rank],
+    file_list,
     {"epoch_mag_RTN": (0), "psp_fld_l2_mag_RTN": (0, 3), "label_RTN": (0, 3)},
 )
 psp_data_ready = dif.extract_components(
@@ -177,7 +144,7 @@ for interval_approx in interval_list_approx:
                 )
                 # Note: due to merging cannot identify specific file with missing data here
                 # only file list as here:
-                # print("corresponding input file list: ", file_list_split[rank])
+                # print("corresponding input file list: ", file_list_split[core])
                 continue
             else:
                 # print("Interval successfully processed")
@@ -192,17 +159,21 @@ if len(good_inputs_list) == 0:
     print("No good inputs found (good_inputs_list is empty). Exiting.")
     exit(1)
 
-print(
-    "\nNumber of standardised intervals: " + str(len(good_inputs_list))
-    # + "\n(may be more than one per original chunk for small cadences)"
-)
-
 # Logarithmically-spaced lags?
 # vals = np.logspace(0, 3, 0.25 * len(good_inputs_list[0]))
 # lags = np.unique(vals.astype(int))
 lags = np.arange(1, 0.25 * len(good_inputs_list[0]))
 powers = [0.5, 2]
-times_to_gap = int(sys.argv[1])
+times_to_gap = int(sys.argv[3])
+
+print(
+    "\nNumber of standardised intervals: ",
+    len(good_inputs_list),
+    "about to be gapped",
+    int(sys.argv[3]),
+    "times",
+)
+# + "\n(may be more than one per original chunk for small cadences)"
 
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -210,9 +181,9 @@ all_bad_outputs_list = []
 all_interp_inputs_list = []
 all_interp_outputs_list = []
 
-print("Core ", rank, "creating gaps and calculating structure functions")
+print("Core ", core, "creating gaps and calculating structure functions")
 for i, input in enumerate(good_inputs_list):
-    # print(f"\nCore {rank} processing standardised interval {i}")
+    # print(f"\nCore {core} processing standardised interval {i}")
     good_output = sf.compute_sf(pd.DataFrame(input), lags, powers)
     good_outputs_list.append(good_output)
 
@@ -241,7 +212,7 @@ for i, input in enumerate(good_inputs_list):
 
         # print(
         #     "Core {0} removed {1:.1f}% (approx. {2:.1f}% in chunks, {3:.1f}% uniformly from int {4})".format(
-        #         rank,
+        #         core,
         #         prop_removed * 100,
         #         prop_remove_chunks * 100,
         #         prop_remove_unif * 100,
@@ -292,7 +263,7 @@ for i, input in enumerate(good_inputs_list):
 # converting from pd.Series to list of np.arrays to save space
 all_good_inputs_list = [interval.values for interval in good_inputs_list]
 
-print("Core ", rank, " saving outputs")
+print("Core ", core, " saving outputs")
 # Export each list of outputs to a pickle file
 list_of_list_of_dfs = [
     good_inputs_list,
@@ -304,13 +275,13 @@ list_of_list_of_dfs = [
 ]
 
 with open(
-    f"data/processed/sfs_psp_core_{rank}.pkl",
-    # "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(rank),
+    f"data/processed/sfs_psp_core_{core}.pkl",
+    # "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(core),
     "wb",
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
 
-print("Core ", rank, " finished")
+print("Core ", core, " finished")
 
 # # Quick check of results
 # fig, ax = plt.subplots(2, 2)
