@@ -1,9 +1,10 @@
 TurbAn/*
-data/*
+data/raw/
 __pycache__/*
 *.out
 *.err
 venv/
+pyspedas/
 *.pyc
 plots/*
 notebooks/*

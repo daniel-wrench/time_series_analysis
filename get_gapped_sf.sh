@@ -28,7 +28,9 @@ index=$SLURM_ARRAY_TASK_ID
 # Load the JSON file corresponding to the files for this core
 input_file_list="input_file_lists/input_files_core_${index}.json"
 
+times_to_gap = 5
+
 #rm -r data/processed/*
-python get_gapped_sf.py $index $input_file_list
+python get_gapped_sf.py $index $input_file_list $times_to_gap
 
 echo "FINISHED"
