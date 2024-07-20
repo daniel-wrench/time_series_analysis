@@ -16,7 +16,7 @@ plt.rcParams.update(
 np.random.seed(42)
 
 
-def compute_sf(data, lags, powers=[2], retain_increments=False):
+def compute_sf(data, lags, powers=[2], retain_increments=False, alt_estimators=True):
     """
     Routine to compute the increments of a time series and then the mean (structure function) and standard deviation
     of the PDF of these increments, raised to the specified powers.
@@ -80,10 +80,11 @@ def compute_sf(data, lags, powers=[2], retain_increments=False):
         )
 
     df = pd.DataFrame(df, index=lags)
-    df["ch"] = df["0.5_mean"] ** 4 / (0.457 + (0.494 / df["n"]))
-    df["dowd"] = (df["mapd"] ** 2) * 2.198
-    # calculate sample size as a proportion of the maximum sample size (for that lag)
-    df["missing_prop"] = 1 - (df["n"] / (len(ax) - df.index))
+    if alt_estimators is True:
+        df["ch"] = df["0.5_mean"] ** 4 / (0.457 + (0.494 / df["n"]))
+        df["dowd"] = (df["mapd"] ** 2) * 2.198
+        # calculate sample size as a proportion of the maximum sample size (for that lag)
+        df["missing_prop"] = 1 - (df["n"] / (len(ax) - df.index))
     return df
 
 
@@ -592,7 +593,7 @@ def plot_heatmap(
         return ax
 
 
-def compute_scaling(bad_output, var, heatmap_vals):
+def compute_scaling(bad_output, var, heatmap_vals, external_test_set=False):
     """
     Extracting values from each bin to create a look-up table. Note that due to binning we have to find the nearest value to get the corresponding MAPE for a given lag and proportion of pairs remaining. Using MPE as we want to maintaing the direction of the error for compensating.
     """
@@ -610,7 +611,10 @@ def compute_scaling(bad_output, var, heatmap_vals):
 
     for i, row in bad_output.iterrows():
         desired_prop = row[var]
-        desired_lag = i[2]  # 3rd level of multi-index = lag
+        if external_test_set is True:
+            desired_lag = i  # No extra columns for original row and version
+        else:
+            desired_lag = i[2]  # 3rd level of multi-index = lag
 
         # Compute absolute differences
         # Using numpy arrays for speedup
@@ -641,9 +645,11 @@ def compute_scaling(bad_output, var, heatmap_vals):
         bad_output.at[i, "scaling_lower"] = scaling_lower
         bad_output.at[i, "scaling_upper"] = scaling_upper
 
-    bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
-        1  # Catching rows where there is no error, so scaling should be 1
-    )
+    if external_test_set is False:
+        bad_output.loc[bad_output["classical_error"] == 0, "scaling"] = (
+            1  # Catching rows where there is no error (only for repeated data),
+            # so scaling should be 1
+        )
 
     bad_output["classical_corrected"] = bad_output["classical"] * bad_output["scaling"]
     bad_output["classical_corrected_lower"] = (
