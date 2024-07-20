@@ -8,7 +8,7 @@ from pprint import pprint
 from scipy.optimize import curve_fit
 import random
 
-plt.rcParams.update({"font.size": 9})
+plt.rcParams.update({"font.size": 12})
 plt.rc("text", usetex=True)
 
 
@@ -967,11 +967,20 @@ def compute_taylor_chuychai(
         return ts_est, ts_est_std
 
 
-def calc_struct_sdk(data, freq, plot):
+def calc_struct_sdk(
+    data,
+    freq,
+    orders=[1, 2, 3, 4],
+    max_lag_fraction=0.2,
+    plot=False,
+    xlim=None,
+    ylim_sf=None,
+    ylim_kurt=None,
+):
     # Calculate lags
     lag_function = {}
     for i in np.arange(
-        1, round(0.2 * len(data))
+        1, round(max_lag_fraction * len(data))
     ):  # Limiting maximum lag to 20% of dataset length
         lag_function[i] = data.diff(i)
 
@@ -979,29 +988,40 @@ def calc_struct_sdk(data, freq, plot):
     structure_functions = pd.DataFrame(index=np.arange(1, len(data)))
 
     # Calculate different orders of structure functions
-    for p in np.arange(1, 5):
+    for p in orders:
         lag_dataframe = pd.DataFrame(lag_function).abs() ** p
         structure_functions[p] = pd.DataFrame(lag_dataframe.mean())
+        structure_functions["N"] = pd.DataFrame(lag_dataframe.count())
 
     # Converting lag values from points to seconds
     structure_functions.index = structure_functions.index / freq
 
-    # Calculate kurtosis
-    sdk = structure_functions[[2, 4]]
-    sdk.columns = ["2", "4"]
-    sdk["2^2"] = sdk["2"] ** 2
-    sdk["kurtosis"] = sdk["4"].div(sdk["2^2"])
+    if 4 in orders:
+        # Calculate kurtosis
+        sdk = structure_functions[[2, 4]].copy()
+        sdk["kurtosis"] = sdk[4].div(sdk[2] ** 2)
 
-    if plot == True:
+    if plot is True:
         # Plot structure functions
-        fig, axs = plt.subplots(1, 2)
-        axs[0].plot(structure_functions)
+        fig, axs = plt.subplots(1, 2, figsize=(11, 5))
+        axs[0].plot(structure_functions[orders], c="red")
         axs[0].semilogx()
         axs[0].semilogy()
         axs[0].set(title="Structure functions (orders 1-4)", xlabel="Lag (s)")
-        axs[1].plot(sdk["kurtosis"])
-        axs[1].semilogx()
-        axs[1].set(title="Kurtosis", xlabel="Lag (s)")
+        if xlim is not None:
+            axs[0].set_xlim(xlim)
+        if ylim_sf is not None:
+            axs[0].set_ylim(ylim_sf)
+
+        if 4 in orders:
+            axs[1].set_xlim(xlim)
+            axs[1].plot(sdk["kurtosis"], c="red")
+            axs[1].semilogx()
+            axs[1].set(title="Kurtosis", xlabel="Lag (s)")
+
+            if ylim_kurt is not None:
+                axs[1].set_ylim(ylim_kurt)
+
         plt.show()
 
     else:
