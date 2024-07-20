@@ -2,7 +2,6 @@
 
 # Note local vs. HPC code options throughout: comment and uncomment as needed
 
-### DEPENDENCY AND PARALLEL SET-UP ###
 
 import pickle
 import pandas as pd
@@ -17,12 +16,15 @@ import json
 # LOAD DATA
 
 # Get list of files in psp directory and split between cores
-core = 0  # sys.argv[1]
-input_file_list_path = "input_file_lists/input_files_core_0.json"  # sys.argv[2]
+core = 0
+# sys.argv[1]
+input_file_list_path = "input_file_lists/input_files_core_0.json"
+# sys.argv[2]
 
 # Load the list of input files from the JSON file
 with open(input_file_list_path, "r") as f:
     file_list = json.load(f)
+
 # raw_file_list = sorted(
 #     #      glob.iglob("data/raw/psp/fields/l2/mag_rtn/2018/" + "/*.cdf")
 #     glob.iglob(
@@ -32,7 +34,7 @@ with open(input_file_list_path, "r") as f:
 # )  # HPC
 
 # For each core, load in the data from the files assigned to that core
-print("Core ", core, "reading data")
+print("Core", core, "reading data")
 psp_data = dif.read_cdfs(
     file_list,
     {"epoch_mag_RTN": (0), "psp_fld_l2_mag_RTN": (0, 3), "label_RTN": (0, 3)},
@@ -181,7 +183,7 @@ all_bad_outputs_list = []
 all_interp_inputs_list = []
 all_interp_outputs_list = []
 
-print("Core ", core, "creating gaps and calculating structure functions")
+print("Core", core, "creating gaps and calculating structure functions")
 for i, input in enumerate(good_inputs_list):
     # print(f"\nCore {core} processing standardised interval {i}")
     good_output = sf.compute_sf(pd.DataFrame(input), lags, powers)
@@ -263,7 +265,7 @@ for i, input in enumerate(good_inputs_list):
 # converting from pd.Series to list of np.arrays to save space
 all_good_inputs_list = [interval.values for interval in good_inputs_list]
 
-print("Core ", core, " saving outputs")
+print("Core", core, "saving outputs")
 # Export each list of outputs to a pickle file
 list_of_list_of_dfs = [
     good_inputs_list,
@@ -281,7 +283,7 @@ with open(
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
 
-print("Core ", core, " finished")
+print("Core", core, "finished")
 
 # # Quick check of results
 # fig, ax = plt.subplots(2, 2)

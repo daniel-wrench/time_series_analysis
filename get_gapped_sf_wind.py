@@ -1,6 +1,7 @@
 ## WIND TEST SET DATA PROCESSING
 
-import glob
+# Data has already been standardised and saved as a pickle file
+
 import pickle
 import pandas as pd
 import numpy as np
@@ -9,59 +10,16 @@ import src.utils as utils  # copied directly from Reynolds project, normalize() 
 import src.sf_funcs as sf
 import sys
 import src.data_import_funcs as dif
-import matplotlib.pyplot as plt
+import json
 
-### CHECK RESULTS
-
-with open("data/processed/sfs_wind_core_0.pkl", "rb") as f:
-    check = pickle.load(f)
-
-
-###
-
-
-# Setting up parallel processing (or not, if running locally)
-try:
-    from mpi4py import MPI
-
-    comm = MPI.COMM_WORLD
-    size = comm.Get_size()
-    rank = comm.Get_rank()
-    status = MPI.Status()
-
-except ImportError:
-    # Set default/empty single-process values if MPI is not available
-    print("MPI not available, running in single-process mode.")
-
-    class DummyComm:
-        def Get_size(self):
-            return 1
-
-        def Get_rank(self):
-            return 0
-
-        def Barrier(self):
-            pass
-
-        def bcast(self, data, root=0):
-            return data
-
-    comm = DummyComm()
-    size = comm.Get_size()
-    rank = comm.Get_rank()
-    status = None
+# LOAD DATA
 
 
 # import pickle file
-with open("data/processed/standardised_wind.pkl", "rb") as f:
+with open("standardised_wind.pkl", "rb") as f:
     good_inputs_list = pickle.load(f)
 
-
-print(
-    "\nNumber of standardised intervals: " + str(len(good_inputs_list))
-    # + "\n(may be more than one per original chunk for small cadences)"
-)
-
+core = 0
 
 # Logarithmically-spaced lags?
 # vals = np.logspace(0, 3, 0.25 * len(good_inputs_list[0]))
@@ -70,15 +28,24 @@ lags = np.arange(1, 0.25 * len(good_inputs_list[0]))
 powers = [0.5, 2]
 times_to_gap = int(sys.argv[1])
 
+print(
+    "\nNumber of standardised intervals: ",
+    len(good_inputs_list),
+    "about to be gapped",
+    int(sys.argv[1]),
+    "times",
+)
+# + "\n(may be more than one per original chunk for small cadences)"
+
 good_outputs_list = []
 all_bad_inputs_list = []
 all_bad_outputs_list = []
 all_interp_inputs_list = []
 all_interp_outputs_list = []
 
-print("Core ", rank, "creating gaps and calculating structure functions")
+print("Core", core, "creating gaps and calculating structure functions")
 for i, input in enumerate(good_inputs_list):
-    # print(f"\nCore {rank} processing standardised interval {i}")
+    # print(f"\nCore {core} processing standardised interval {i}")
     good_output = sf.compute_sf(pd.DataFrame(input), lags, powers)
     good_outputs_list.append(good_output)
 
@@ -158,7 +125,7 @@ for i, input in enumerate(good_inputs_list):
 # converting from pd.Series to list of np.arrays to save space
 all_good_inputs_list = [interval.values for interval in good_inputs_list]
 
-print("Core ", rank, " saving outputs")
+print("Core", core, "saving outputs")
 # Export each list of outputs to a pickle file
 list_of_list_of_dfs = [
     good_inputs_list,
@@ -170,23 +137,23 @@ list_of_list_of_dfs = [
 ]
 
 with open(
-    f"data/processed/sfs_wind_core_{rank}.pkl",
-    # "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(rank),
+    f"data/processed/sfs_wind_core_{core}.pkl",
+    # "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(core),
     "wb",
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
 
-print("Core ", rank, " finished")
+print("Core", core, "finished")
 
 # # Quick check of results
-fig, ax = plt.subplots(2, 2)
-for i in range(2):
-    ax[i, 0].plot(good_inputs_list[-i].values)
-    ax[i, 0].plot(all_interp_inputs_list[-i][-1])
-    ax[i, 0].plot(all_bad_inputs_list[-i][-1])
-    ax[i, 1].plot(good_outputs_list[-i]["classical"])
-    ax[i, 1].plot(all_interp_outputs_list[-i][-1]["classical"])
-    ax[i, 1].plot(all_bad_outputs_list[-i][-1]["classical"])
+# fig, ax = plt.subplots(2, 2)
+# for i in range(2):
+#     ax[i, 0].plot(good_inputs_list[-i].values)
+#     ax[i, 0].plot(all_interp_inputs_list[-i][-1])
+#     ax[i, 0].plot(all_bad_inputs_list[-i][-1])
+#     ax[i, 1].plot(good_outputs_list[-i]["classical"])
+#     ax[i, 1].plot(all_interp_outputs_list[-i][-1]["classical"])
+#     ax[i, 1].plot(all_bad_outputs_list[-i][-1]["classical"])
 
-plt.savefig("data/processed/validation_plot.png")
-print("Validation plot saved")
+# plt.savefig("data/processed/validation_plot.png")
+# print("Validation plot saved")

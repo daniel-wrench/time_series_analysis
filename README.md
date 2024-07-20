@@ -2,14 +2,35 @@
 
 **Should always have code ready to demonstrate on small dataset locally and quickly, if not in a fully-fledged Jupyter notebook**
 
-## `1_get_stats.py`
-Run flipbook code to get all spectral stats for a given time series
+## SF gap analysis pipeline
 
-## `2_plot_ts_stats.py` 
-Plot those stats
-
-## `3_plot_lag_stats.py`
-Plot the 3 SF estimators for a given interval, then plot the tau-scattergrams and PDFs for 3 specific lags.
+1. `git clone https://github.com/daniel-wrench/reynolds_scales_project`
+2. `module load {available Python version}`
+2. `python -m venv venv`
+3. `source venv/bin/activate`
+1. `pip install -r requirements.txt` (Install the required packages)
+2. `bash download_files.sh` (Download the raw files)
+3. `python assign_files_to_cores.py "{raw_file_dir}" {num_cores}` (Create JSON lists which divide the raw files amongst the cores). If running locally, use `num_cores=0`.
+4. On an HPC: `source get_gapped_sf.sh` (Gap the intervals and calculate structure functions)
+   Locally: `python get_gapped_sf.py 0 "input_file_lists/input_files_core_0.json" {times_to_gap}`
+    1. Standardise intervals
+    2. Gap `{times_to_gap}` times and calculate SFs (including which method, whether to retain increments)
+    3. Export as `sfs_{dataset}_core_{core}.pkl`
+4. `python get_gapped_wind.py {times_to_gap}` *Currently, the wind data is already being processed prior and simply read in as a pickle file here*
+5. tmux -> `python plot_results.py` (Get the heatmaps, statistical analysis and case studies of estimation performance on the test set)
+    1. Calculate heatmap lookup table
+    2. Export lookup table
+    3. Correct SF estimates
+    4. Plot results
+6. tmux -> `python_plot_results_wind.py` (Get the statistical analysis and case studies on the external test set)
+    1. Read in lookup table
+    2. Correct SF estimates
+    3. Plot results
+    
+## Supplementary scripts
+- `1_get_stats.py` (Run flipbook code to get all spectral stats for a given time series)
+- `2_plot_ts_stats.py` (Plot those stats)
+- `3_plot_lag_stats.py` (Plot the 3 SF estimators for a given interval, then plot the tau-scattergrams and PDFs for 3 specific lags.)
 
 ## `get_gapped_sf.py` (Rāpoi job)
 Gap and calculate SFs for a lot of time series. Needs to run on PSP data (training and test set) and Wind data (external test set: much smaller)

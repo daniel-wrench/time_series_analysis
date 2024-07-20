@@ -15,7 +15,6 @@
 #SBATCH --mail-type         BEGIN,END,FAIL
 #SBATCH --mail-user         daniel.wrench@vuw.ac.nz
 
-module load GCC/11.3.0
 module load Python/3.10.4
 
 source venv/bin/activate
