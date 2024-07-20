@@ -1,5 +1,5 @@
 TurbAn/*
-data/raw/
+data/*
 __pycache__/*
 *.out
 *.err
@@ -7,5 +7,4 @@ venv/
 pyspedas/
 *.pyc
 plots/*
-notebooks/*
 .vscode/*
