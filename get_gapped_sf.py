@@ -12,14 +12,20 @@ import src.sf_funcs as sf
 import sys
 import src.data_import_funcs as dif
 import json
+import os
 
 # LOAD DATA
 
 # Get list of files in psp directory and split between cores
-core = 0
-# sys.argv[1]
-input_file_list_path = "input_file_lists/input_files_core_0.json"
-# sys.argv[2]
+
+# LOCAL
+# core = 0
+# input_file_list_path = "input_file_lists/input_files_core_0.json"
+
+# HPC
+core = sys.argv[1]
+input_file_list_path = sys.argv[2]
+out_dir = "/nesi/project/vuw04187/data/processed/"
 
 # Load the list of input files from the JSON file
 with open(input_file_list_path, "r") as f:
@@ -36,7 +42,7 @@ with open(input_file_list_path, "r") as f:
 # For each core, load in the data from the files assigned to that core
 print("Core", core, "reading data")
 psp_data = dif.read_cdfs(
-    file_list,
+    file_list, # LIMIT HERE!
     {"epoch_mag_RTN": (0), "psp_fld_l2_mag_RTN": (0, 3), "label_RTN": (0, 3)},
 )
 psp_data_ready = dif.extract_components(
@@ -89,8 +95,8 @@ tce_approx = 500  # s
 tce_approx_n = 15
 cadence_approx = 0.1  # s
 
-tce_n = 8  # Number of actual (computed) correlation times we want in our standardised interval...
-interval_length = 1000  # ...across this many points
+tce_n = 10  # Number of actual (computed) correlation times we want in our standardised interval...
+interval_length = 10000  # ...across this many points
 
 df = df_raw.resample(str(cadence_approx) + "S").mean()
 interval_length_approx = int(tce_approx * tce_approx_n / cadence_approx)
@@ -141,9 +147,9 @@ for interval_approx in interval_list_approx:
             interval = interval_approx_resampled.iloc[i : i + interval_length]
             # Check if interval is complete
             if interval.isnull().sum() > 0:
-                print(
-                    "interval contains missing data even after down-sampling; skipping"
-                )
+                #print(
+                #    "interval contains missing data even after down-sampling; skipping"
+                #)
                 # Note: due to merging cannot identify specific file with missing data here
                 # only file list as here:
                 # print("corresponding input file list: ", file_list_split[core])
@@ -276,9 +282,14 @@ list_of_list_of_dfs = [
     all_interp_outputs_list,
 ]
 
+print("Example input:\n", good_inputs_list[0].head())
+print("Example bad output:\n", all_bad_outputs_list[0][0].head())
+#output_dir = "data/processed/"
+#if not os.path.exists(output_dir):
+#    os.makedirs(output_dir)
+
 with open(
-    f"data/processed/sfs_psp_core_{core}.pkl",
-    # "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(core),
+    out_dir + f"sfs_psp_core_{core}.pkl",
     "wb",
 ) as f:
     pickle.dump(list_of_list_of_dfs, f)
