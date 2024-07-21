@@ -11,6 +11,9 @@ def split_files(input_dir, num_cores):
         for f in os.listdir(input_dir)
         if os.path.isfile(os.path.join(input_dir, f)) and f.endswith(".cdf")
     ]
+    
+    # Sort the files to ensure adjacency
+    all_files.sort()
     total_files = len(all_files)
 
     # Calculate the number of files per core
