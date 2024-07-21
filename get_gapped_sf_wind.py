@@ -137,7 +137,7 @@ list_of_list_of_dfs = [
 ]
 
 with open(
-    f"data/processed/sfs_wind_core_{core}.pkl",
+    f"data/processed/external/sfs_wind_core_{core}.pkl",
     # "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/sfs_psp_core_{0:03d}.pkl".format(core),
     "wb",
 ) as f:
