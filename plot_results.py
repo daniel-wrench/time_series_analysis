@@ -13,7 +13,7 @@ from datetime import datetime
 # Print the current time
 print("Current time:", datetime.now(), "\n")
 
-# Because Rāpoi can't handle latex apparently
+# Because Rapoi can't handle latex apparently
 plt.rcParams.update(
     {
         "text.usetex": False,
@@ -23,19 +23,19 @@ plt.rcParams.update(
     }
 )
 
-input_path = "data/processed/"
-save_dir = "plots/sim_results_local/"
+input_path = "/nesi/project/vuw04187/data/processed/"
+save_dir = "plots/temp/"
 # input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/"
 # save_dir = "plots/plots_small/"
 
 missing_measure = "missing_prop"
-n_ints_to_plot = 2
+n_ints_to_plot = 4
 n_versions_to_plot = 2  # Number of version of each interval to plot
 
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
-# pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:10]
-pickle_files = ["sfs_psp_core_0.pkl"]
+pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:30]
+#pickle_files = ["sfs_psp_core_0.pkl"]
 good_inputs_list = []
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -45,16 +45,23 @@ all_interp_outputs_list = []
 
 # Read in all pickle files in the directory
 for file in pickle_files:
-    with open(os.path.join(input_path, file), "rb") as file:
-        list_of_list_of_dfs = pickle.load(file)
+      try:
+        with open(os.path.join(input_path, file), "rb") as file:
+            list_of_list_of_dfs = pickle.load(file)
+            
+            good_inputs_list += list_of_list_of_dfs[0]
+            good_outputs_list += list_of_list_of_dfs[1]
+            all_bad_inputs_list += list_of_list_of_dfs[2]
+            all_bad_outputs_list += list_of_list_of_dfs[3]
+            all_interp_inputs_list += list_of_list_of_dfs[4]
+            all_interp_outputs_list += list_of_list_of_dfs[5]
 
-        good_inputs_list += list_of_list_of_dfs[0]
-        good_outputs_list += list_of_list_of_dfs[1]
-        all_bad_inputs_list += list_of_list_of_dfs[2]
-        all_bad_outputs_list += list_of_list_of_dfs[3]
-        all_interp_inputs_list += list_of_list_of_dfs[4]
-        all_interp_outputs_list += list_of_list_of_dfs[5]
-
+      except pickle.UnpicklingError:
+          print(f"UnpicklingError encountered in file: {file}. Skipping this file.")
+      except EOFError:
+          print(f"EOFError encountered in file: {file}. Skipping this file.")
+      except Exception as e:
+          print(f"An unexpected error {e} occurred with file: {file}. Skipping this file.")
 
 print(
     f"... = {len(all_interp_outputs_list[0])} versions of {len(all_interp_outputs_list)} inputs"
@@ -234,7 +241,7 @@ def annotate_curve(ax, x, y, text, offset_scaling=(0.3, 0.1)):
     )
 
 
-for n_bins in [15]:
+for n_bins in [15, 20, 25]:
     # First with no interpolation
     heatmap_bin_vals_log_bad, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
         sf.create_heatmap_lookup(
