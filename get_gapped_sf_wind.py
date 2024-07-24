@@ -19,7 +19,10 @@ import json
 with open("standardised_wind.pkl", "rb") as f:
     good_inputs_list = pickle.load(f)
 
+good_inputs_list = good_inputs_list[:10]
+
 core = 0
+rank = 0
 
 # Logarithmically-spaced lags?
 # vals = np.logspace(0, 3, 0.25 * len(good_inputs_list[0]))
@@ -32,7 +35,7 @@ print(
     "\nNumber of standardised intervals: ",
     len(good_inputs_list),
     "about to be gapped",
-    int(sys.argv[1]),
+    times_to_gap,
     "times",
 )
 # + "\n(may be more than one per original chunk for small cadences)"
@@ -72,15 +75,15 @@ for i, input in enumerate(good_inputs_list):
             # print(">95% or 0% data removed, skipping")
             continue
 
-        # print(
-        #     "Core {0} removed {1:.1f}% (approx. {2:.1f}% in chunks, {3:.1f}% uniformly from int {4})".format(
-        #         rank,
-        #         prop_removed * 100,
-        #         prop_remove_chunks * 100,
-        #         prop_remove_unif * 100,
-        #         i,
-        #     )
-        # )
+        print(
+            "Core {0} removed {1:.1f}% (approx. {2:.1f}% in chunks, {3:.1f}% uniformly from int {4})".format(
+                rank,
+                prop_removed * 100,
+                prop_remove_chunks * 100,
+                prop_remove_unif * 100,
+                i,
+            )
+        )
 
         bad_inputs_list.append(bad_input.values)
 
