@@ -29,7 +29,7 @@ save_dir = "plots/temp/"
 # save_dir = "plots/plots_small/"
 
 missing_measure = "missing_prop"
-n_ints_to_plot = 2
+n_ints_to_plot = 3
 n_versions_to_plot = 2  # Number of version of each interval to plot
 
 print("Reading in processed data files, merging...")
@@ -101,7 +101,7 @@ for input_ind in range(n_ints_to_plot):
         ["classical"],
         "SF estimation subject to missing data: naive",
     )
-    plt.savefig(save_dir + f"sf_i_{input_ind}_naive_wind.png")
+    plt.savefig(save_dir + f"sf_wind_i_{input_ind}_naive.png")
     plt.close()
 
     sf.plot_sample(
@@ -115,7 +115,7 @@ for input_ind in range(n_ints_to_plot):
         ["classical"],
         "SF estimation subject to missing data: linear interpolation",
     )
-    plt.savefig(save_dir + f"sf_i_{input_ind}_lint_wind.png")
+    plt.savefig(save_dir + f"sf_wind_i_{input_ind}_lint.png")
     plt.close()
 
 
@@ -184,7 +184,7 @@ def annotate_curve(ax, x, y, text, offset_scaling=(0.3, 0.1)):
     )
 
 
-for n_bins in [15]:
+for n_bins in [10, 15, 20]:
     # Import the lookup tables and 2D error heatmap
     lookup_table = pd.read_csv(save_dir + f"lookup_table_2d_b_{n_bins}.csv")
     lookup_table_3d = pd.read_csv(save_dir + f"lookup_table_3d_b_{n_bins}.csv")
@@ -410,7 +410,7 @@ for n_bins in [15]:
         plt.subplots_adjust(bottom=0.2)
         plt.savefig(
             save_dir
-            + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d_external.png"
+            + f"sf_wind_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d.png"
         )
         plt.close()
 
