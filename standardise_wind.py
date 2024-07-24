@@ -4,6 +4,7 @@ import numpy as np
 # while ".toplevel" not in os.listdir():
 #     os.chdir("..")
 
+import glob
 import src.utils as utils
 import src.params as params
 
@@ -27,19 +28,7 @@ sys_arg_dict = {
     "dt_lr": params.dt_lr,
 }
 
-files = [
-    "data/raw/wind/wi_h2_mfi_20160101_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160102_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160103_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160104_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160105_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160106_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160107_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160108_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160109_v05.cdf",
-    "data/raw/wind/wi_h2_mfi_20160110_v05.cdf",
-    
-]
+raw_file_list = sorted(glob.iglob("data/raw/wind/" + "/*.cdf"))
 
 # Original freq is 0.007s. Resampling to less rapid but still sufficiently high cadence, then splitting into chunks with ~15 correlation times
 
@@ -51,7 +40,7 @@ tce_n = 10  # Number of correlation times we want...
 interval_length = 10000  # ...across this many points
 good_inputs_list = []
 
-for file in files:
+for file in raw_file_list:
     df = utils.pipeline(
         file,
         varlist=sys_arg_dict["mag_vars"],

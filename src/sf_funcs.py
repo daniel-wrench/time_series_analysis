@@ -83,8 +83,8 @@ def compute_sf(data, lags, powers=[2], retain_increments=False, alt_estimators=T
     if alt_estimators is True:
         df["ch"] = df["0.5_mean"] ** 4 / (0.457 + (0.494 / df["n"]))
         df["dowd"] = (df["mapd"] ** 2) * 2.198
-        # calculate sample size as a proportion of the maximum sample size (for that lag)
-        df["missing_prop"] = 1 - (df["n"] / (len(ax) - df.index))
+    # calculate sample size as a proportion of the maximum sample size (for that lag)
+    df["missing_prop"] = 1 - (df["n"] / (len(ax) - df.index))
     return df
 
 
