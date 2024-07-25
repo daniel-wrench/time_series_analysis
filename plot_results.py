@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import os
 import pandas as pd
 import numpy as np
@@ -36,7 +37,8 @@ n_versions_to_plot = 2  # Number of version of each interval to plot
 
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
-pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:30]
+pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:120]
+#pickle_files = ["sfs_psp_core_0.pkl"]
 good_inputs_list = []
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -244,7 +246,7 @@ def annotate_curve(ax, x, y, text, offset_scaling=(0.3, 0.1)):
     )
 
 
-for n_bins in [15, 20, 25]:
+for n_bins in [10, 15, 20]:
     # First with no interpolation
     heatmap_bin_vals_log_bad, heatmap_bin_edges_log_bad, lookup_table_log_bad = (
         sf.create_heatmap_lookup(
@@ -508,7 +510,7 @@ for n_bins in [15, 20, 25]:
 
             ax.semilogx()
             ax.semilogy()
-            ax.set_ylim(5e-3, 5e0)
+            ax.set_ylim(1e-2, 1e1)
             ax.legend(loc="lower right")
 
             # if log is True:
