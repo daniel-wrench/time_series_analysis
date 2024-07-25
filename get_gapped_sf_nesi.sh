@@ -18,10 +18,10 @@ index=$SLURM_ARRAY_TASK_ID
 
 # Load the JSON file corresponding to the files for this core
 input_file_list="input_file_lists/input_files_core_${index}.json"
-
+output_dir="/nesi/project/vuw04187/data/processed/"
 times_to_gap=10
 
 rm -r data/processed/*.pkl
-python get_gapped_sf.py $index $input_file_list $times_to_gap
+python get_gapped_sf.py $index $input_file_list $times_to_gap $output_dir
 
 echo "FINISHED"

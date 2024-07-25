@@ -214,7 +214,7 @@ for n_bins in [10, 15, 20]:
                 print(f"\nKey {key} not found in the MultiIndex")
             else:
                 error_2d = (
-                    test_set_corrected.loc[(i, j), "classical_corrected"]
+                    test_set_corrected.loc[(i, j), "classical_corrected_smoothed"]
                     - df["classical"]
                 )
                 error_percent_2d = error_2d / df["classical"] * 100
@@ -228,12 +228,12 @@ for n_bins in [10, 15, 20]:
                 error_percents_3d.append(error_percent_3d)
 
     print(
-        "Mean MAPE of corrected interpolated intervals in external test set (classical, 2D, {0} bins) = {1:.2f}".format(
+        "Mean MAPE of SMOOTHED corrected interpolated intervals in external test set (classical, 2D, {0} bins) = {1:.2f}".format(
             n_bins, np.mean(np.abs(error_percents_2d))
         )
     )
     print(
-        "Mean MAPE of corrected interpolated intervals in external test set (classical, 3D, {0} bins) = {1:.2f}".format(
+        "Mean MAPE of SMOOTHED corrected interpolated intervals in external test set (classical, 3D, {0} bins) = {1:.2f}".format(
             n_bins, np.mean(np.abs(error_percents_3d))
         )
     )
@@ -308,7 +308,7 @@ for n_bins in [10, 15, 20]:
             # )
             ax.plot(
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected"
+                    "classical_corrected_smoothed"
                 ],
                 c="blue",
                 lw=1.2,
@@ -318,10 +318,10 @@ for n_bins in [10, 15, 20]:
             ax.fill_between(
                 interp_outputs_test_df.loc[input_ind, int_version]["lag"],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_lower"
+                    "classical_corrected_lower_smoothed"
                 ],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_upper"
+                    "classical_corrected_upper_smoothed"
                 ],
                 color="blue",
                 alpha=0.2,
@@ -329,7 +329,7 @@ for n_bins in [10, 15, 20]:
 
             ax.plot(
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_3d"
+                    "classical_corrected_3d_smoothed"
                 ],
                 c="purple",
                 ls=":",
@@ -339,10 +339,10 @@ for n_bins in [10, 15, 20]:
             ax.fill_between(
                 interp_outputs_test_df.loc[input_ind, int_version]["lag"],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_3d_lower"
+                    "classical_corrected_3d_lower_smoothed"
                 ],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_3d_upper"
+                    "classical_corrected_3d_upper_smoothed"
                 ],
                 color="purple",
                 alpha=0.2,
@@ -350,7 +350,7 @@ for n_bins in [10, 15, 20]:
 
             ax.semilogx()
             ax.semilogy()
-            ax.set_ylim(1e-2, 1e1)
+            ax.set_ylim(5e-3, 5e0)
             ax.legend(loc="lower right")
 
             # if log is True:
@@ -410,7 +410,7 @@ for n_bins in [10, 15, 20]:
         plt.subplots_adjust(bottom=0.2)
         plt.savefig(
             save_dir
-            + f"sf_wind_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d.png"
+            + f"sf_wind_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d_SMOOTHED.png"
         )
         plt.close()
 
