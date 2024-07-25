@@ -122,7 +122,7 @@ def plot_sample(
             ncols,
             figsize=(ncols * 5, n * 3),
             sharex="col",
-            gridspec_kw={"hspace": 0},
+            gridspec_kw={"hspace": 0.2},
         )
         other_inputs_plot = [other_inputs[input_ind][i] for i in input_versions]
         other_outputs_plot = [other_outputs[input_ind][i] for i in input_versions]
@@ -133,7 +133,7 @@ def plot_sample(
             ncols,
             figsize=(ncols * 5, n * 3),
             sharex="col",
-            gridspec_kw={"hspace": 0},
+            gridspec_kw={"hspace": 0.2},
         )
         # Before plotting, sort the n bad inputs by missing proportion
         other_inputs_plot = other_inputs[input_ind][:n]
@@ -276,7 +276,7 @@ def plot_sample(
                 #         label=f"$\pm$ {x} SE",
                 #     )
 
-                ax[i, j].set_ylim(1e-2, 1e1)
+                ax[i, j].set_ylim(5e-3, 5e0)
 
         if linear is True:
             ax[i, 2].semilogx()
@@ -296,7 +296,7 @@ def plot_sample(
 
     # ax[0, ncols - 1].axhline(0, color="black", linestyle="--")
     ax[0, ncols - 1].semilogx()
-    ax[0, 1].legend(loc="lower right", frameon=True)
+    # ax[0, 1].legend(loc="lower right", frameon=True)
 
     ax[0, ncols - 1].annotate(
         "% pairs missing",
@@ -456,9 +456,10 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
                 # Calculate standard error for the lookup table too
                 lag_prop_std_err = np.nanstd(
                     inputs["classical_error_percent"][(xidx == i) & (yidx == j)]
-                ) / np.sqrt(
-                    len(inputs["classical_error_percent"][(xidx == i) & (yidx == j)])
                 )
+                # / np.sqrt(
+                #    len(inputs["classical_error_percent"][(xidx == i) & (yidx == j)])
+                # )
 
                 # upper[i, j] = lag_prop_mean + 3 * lag_prop_std_err
                 # lower[i, j] = lag_prop_mean - 3 * lag_prop_std_err
@@ -601,8 +602,8 @@ def compute_scaling(bad_output, var, heatmap_vals, external_test_set=False):
 
     # Precompute scaling factors
     df["scaling"] = 1 / (1 + df["MPE"] / 100)
-    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 3 * df["MPE_std_err"]) / 100)
-    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 3 * df["MPE_std_err"]) / 100)
+    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 1 * df["MPE_std_err"]) / 100)
+    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 1 * df["MPE_std_err"]) / 100)
 
     # If no nearest bin is found (len(nearest_row)=0), scaling will be 1 (the same)
     bad_output["scaling"] = 1
@@ -659,12 +660,25 @@ def compute_scaling(bad_output, var, heatmap_vals, external_test_set=False):
         bad_output["classical"] * bad_output["scaling_upper"]
     )
     # Smoothing potentially jumpy correction
-    # bad_output["scaling_smoothed"] = (
-    #     bad_output["scaling"].rolling(window=20, min_periods=1).mean()
-    # )
-    # bad_output["classical_corrected_smoothed"] = (
-    #     bad_output["classical"] * bad_output["scaling_smoothed"]
-    # )
+    bad_output["scaling_smoothed"] = (
+        bad_output["scaling"].rolling(window=10, min_periods=1).mean()
+    )
+    bad_output["scaling_lower_smoothed"] = (
+        bad_output["scaling_lower"].rolling(window=10, min_periods=1).mean()
+    )
+    bad_output["scaling_upper_smoothed"] = (
+        bad_output["scaling_upper"].rolling(window=10, min_periods=1).mean()
+    )
+    bad_output["classical_corrected_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_smoothed"]
+    )
+    bad_output["classical_corrected_lower_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_lower_smoothed"]
+    )
+    bad_output["classical_corrected_upper_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_upper_smoothed"]
+    )
+
     return bad_output
 
 
@@ -734,10 +748,23 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
         bad_output["classical"] * bad_output["scaling_upper"]
     )
     # Smoothing potentially jumpy correction
-    # bad_output["scaling_smoothed"] = (
-    #     bad_output["scaling"].rolling(window=20, min_periods=1).mean()
-    # )
-    # bad_output["classical_corrected_smoothed"] = (
-    #     bad_output["classical"] * bad_output["scaling_smoothed"]
-    # )
+    bad_output["scaling_3d_smoothed"] = (
+        bad_output["scaling"].rolling(window=10, min_periods=1).mean()
+    )
+
+    bad_output["scaling_lower_3d_smoothed"] = (
+        bad_output["scaling_lower"].rolling(window=10, min_periods=1).mean()
+    )
+    bad_output["scaling_upper_3d_smoothed"] = (
+        bad_output["scaling_upper"].rolling(window=10, min_periods=1).mean()
+    )
+    bad_output["classical_corrected_3d_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_3d_smoothed"]
+    )
+    bad_output["classical_corrected_3d_lower_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_lower_3d_smoothed"]
+    )
+    bad_output["classical_corrected_3d_upper_smoothed"] = (
+        bad_output["classical"] * bad_output["scaling_upper_3d_smoothed"]
+    )
     return bad_output
