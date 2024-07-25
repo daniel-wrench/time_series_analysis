@@ -485,7 +485,7 @@ for n_bins in [15, 20, 25]:
 
             ax.semilogx()
             ax.semilogy()
-            ax.set_ylim(1e-2, 1e1)
+            ax.set_ylim(5e-3, 5e0)
             ax.legend(loc="lower right")
 
             # if log is True:
