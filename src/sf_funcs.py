@@ -602,8 +602,8 @@ def compute_scaling(bad_output, var, heatmap_vals, external_test_set=False):
 
     # Precompute scaling factors
     df["scaling"] = 1 / (1 + df["MPE"] / 100)
-    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 1 * df["MPE_std_err"]) / 100)
-    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 1 * df["MPE_std_err"]) / 100)
+    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 10 * df["MPE_std_err"]) / 100)
+    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 10 * df["MPE_std_err"]) / 100)
 
     # If no nearest bin is found (len(nearest_row)=0), scaling will be 1 (the same)
     bad_output["scaling"] = 1
@@ -661,13 +661,13 @@ def compute_scaling(bad_output, var, heatmap_vals, external_test_set=False):
     )
     # Smoothing potentially jumpy correction
     bad_output["scaling_smoothed"] = (
-        bad_output["scaling"].rolling(window=10, min_periods=1).mean()
+        bad_output["scaling"].rolling(window=20, min_periods=1).mean()
     )
     bad_output["scaling_lower_smoothed"] = (
-        bad_output["scaling_lower"].rolling(window=10, min_periods=1).mean()
+        bad_output["scaling_lower"].rolling(window=20, min_periods=1).mean()
     )
     bad_output["scaling_upper_smoothed"] = (
-        bad_output["scaling_upper"].rolling(window=10, min_periods=1).mean()
+        bad_output["scaling_upper"].rolling(window=20, min_periods=1).mean()
     )
     bad_output["classical_corrected_smoothed"] = (
         bad_output["classical"] * bad_output["scaling_smoothed"]
@@ -689,8 +689,8 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
 
     # Precompute scaling factors
     df["scaling"] = 1 / (1 + df["MPE"] / 100)
-    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 3 * df["MPE_std_err"]) / 100)
-    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 3 * df["MPE_std_err"]) / 100)
+    df["scaling_lower"] = 1 / (1 + (df["MPE"] + 10 * df["MPE_std_err"]) / 100)
+    df["scaling_upper"] = 1 / (1 + (df["MPE"] - 10 * df["MPE_std_err"]) / 100)
 
     # If no nearest bin is found (len(nearest_row)=0), scaling will be 1 (the same)
     bad_output["scaling"] = 1
@@ -749,14 +749,14 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
     )
     # Smoothing potentially jumpy correction
     bad_output["scaling_3d_smoothed"] = (
-        bad_output["scaling"].rolling(window=10, min_periods=1).mean()
+        bad_output["scaling"].rolling(window=20, min_periods=1).mean()
     )
 
     bad_output["scaling_lower_3d_smoothed"] = (
-        bad_output["scaling_lower"].rolling(window=10, min_periods=1).mean()
+        bad_output["scaling_lower"].rolling(window=20, min_periods=1).mean()
     )
     bad_output["scaling_upper_3d_smoothed"] = (
-        bad_output["scaling_upper"].rolling(window=10, min_periods=1).mean()
+        bad_output["scaling_upper"].rolling(window=20, min_periods=1).mean()
     )
     bad_output["classical_corrected_3d_smoothed"] = (
         bad_output["classical"] * bad_output["scaling_3d_smoothed"]
