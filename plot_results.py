@@ -23,19 +23,20 @@ plt.rcParams.update(
     }
 )
 
-input_path = "/nesi/project/vuw04187/data/processed/"
+# input_path = "/nesi/project/vuw04187/data/processed/"
+input_path = "data/processed"
+pickle_files = ["sfs_psp_core_0.pkl"]
+
 save_dir = "plots/temp/"
 # input_path = "/nfs/scratch/wrenchdani/time_series_analysis/data/processed_small/"
-# save_dir = "plots/plots_small/"
 
 missing_measure = "missing_prop"
-n_ints_to_plot = 4
+n_ints_to_plot = 2
 n_versions_to_plot = 2  # Number of version of each interval to plot
 
 print("Reading in processed data files, merging...")
 # List all pickle files in the folder
 pickle_files = [file for file in os.listdir(input_path) if file.endswith(".pkl")][:30]
-#pickle_files = ["sfs_psp_core_0.pkl"]
 good_inputs_list = []
 good_outputs_list = []
 all_bad_inputs_list = []
@@ -45,10 +46,10 @@ all_interp_outputs_list = []
 
 # Read in all pickle files in the directory
 for file in pickle_files:
-      try:
+    try:
         with open(os.path.join(input_path, file), "rb") as file:
             list_of_list_of_dfs = pickle.load(file)
-            
+
             good_inputs_list += list_of_list_of_dfs[0]
             good_outputs_list += list_of_list_of_dfs[1]
             all_bad_inputs_list += list_of_list_of_dfs[2]
@@ -56,12 +57,14 @@ for file in pickle_files:
             all_interp_inputs_list += list_of_list_of_dfs[4]
             all_interp_outputs_list += list_of_list_of_dfs[5]
 
-      except pickle.UnpicklingError:
-          print(f"UnpicklingError encountered in file: {file}. Skipping this file.")
-      except EOFError:
-          print(f"EOFError encountered in file: {file}. Skipping this file.")
-      except Exception as e:
-          print(f"An unexpected error {e} occurred with file: {file}. Skipping this file.")
+    except pickle.UnpicklingError:
+        print(f"UnpicklingError encountered in file: {file}. Skipping this file.")
+    except EOFError:
+        print(f"EOFError encountered in file: {file}. Skipping this file.")
+    except Exception as e:
+        print(
+            f"An unexpected error {e} occurred with file: {file}. Skipping this file."
+        )
 
 print(
     f"... = {len(all_interp_outputs_list[0])} versions of {len(all_interp_outputs_list)} inputs"
@@ -157,12 +160,12 @@ interp_outputs_test_df = concat_dfs(interp_outputs_test)
 # View trends as fn of OVERALL missing amount
 for estimator in ["classical", "ch", "dowd"]:
     print(
-        "Mean MAPE of uncorrected bad SFs in test set ({0}) = {1:.2f}".format(
+        "MAPE of uncorrected bad SFs in test set ({0}) = {1:.2f}".format(
             estimator, bad_outputs_test_df[f"{estimator}_error_percent"].abs().mean()
         )
     )
     print(
-        "Mean MAPE of uncorrected interpolated SFs in test set ({0}) = {1:.2f}".format(
+        "MAPE of uncorrected interpolated SFs in test set ({0}) = {1:.2f}".format(
             estimator, interp_outputs_test_df[f"{estimator}_error_percent"].abs().mean()
         )
     )
@@ -341,7 +344,9 @@ for n_bins in [15, 20, 25]:
 
     # Calculate corrected test set error
     error_percents_2d = []
+    # slope_error_percents_2d = []
     error_percents_3d = []
+    # slope_error_percents_3d = []
 
     for i, df in enumerate(good_outputs_test):
         for j in range(times_to_gap):
@@ -350,26 +355,44 @@ for n_bins in [15, 20, 25]:
                 print(f"\nKey {key} not found in the MultiIndex")
             else:
                 error_2d = (
-                    test_set_corrected.loc[(i, j), "classical_corrected"]
+                    test_set_corrected.loc[(i, j), "classical_corrected_smoothed"]
                     - df["classical"]
                 )
                 error_percent_2d = error_2d / df["classical"] * 100
                 error_percents_2d.append(error_percent_2d)
 
+                # Fit power law to test_set_corrected.loc[i,]test_set_corrected.loc[(i, j), "classical_corrected_smoothed"]
+                # TEST IN NOTEBOOK
+
+                # slope_true = np.polyfit(
+                #     np.log(df.loc[10:100, "lag"]),
+                #     np.log(df.loc[10:100, "classical"]),
+                #     1,
+                # )[0]
+
+                # slope_corrected = np.polyfit(
+                #     np.log(test_set_corrected.loc[(i, j, 10:100), "lag"]),
+                #     np.log(test_set_corrected.loc[(i, j), "classical_corrected_smoothed"]),
+                #     1,
+                # )[0]
+
+                # slope_error_percent = (slope_corrected - slope_true) / slope_true * 100
+                # # slope_error_percents_2d.append(slope_error_corrected)
+
                 error_3d = (
-                    test_set_corrected.loc[(i, j), "classical_corrected_3d"]
+                    test_set_corrected.loc[(i, j), "classical_corrected_3d_smoothed"]
                     - df["classical"]
                 )
                 error_percent_3d = error_3d / df["classical"] * 100
                 error_percents_3d.append(error_percent_3d)
 
     print(
-        "Mean MAPE of corrected interpolated intervals in test set (classical, 2D, {0} bins) = {1:.2f}".format(
+        "Mean MAPE of SMOOTHED corrected interpolated intervals in test set (classical, 2D, {0} bins) = {1:.2f}".format(
             n_bins, np.mean(np.abs(error_percents_2d))
         )
     )
     print(
-        "Mean MAPE of corrected interpolated intervals in test set (classical, 3D, {0} bins) = {1:.2f}".format(
+        "Mean MAPE of SMOOTHED corrected interpolated intervals in test set (classical, 3D, {0} bins) = {1:.2f}".format(
             n_bins, np.mean(np.abs(error_percents_3d))
         )
     )
@@ -443,7 +466,7 @@ for n_bins in [15, 20, 25]:
             # )
             ax.plot(
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected"
+                    "classical_corrected_smoothed"
                 ],
                 c="blue",
                 lw=1.2,
@@ -453,10 +476,10 @@ for n_bins in [15, 20, 25]:
             ax.fill_between(
                 interp_outputs_test_df.loc[input_ind, int_version]["lag"],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_lower"
+                    "classical_corrected_lower_smoothed"
                 ],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_upper"
+                    "classical_corrected_upper_smoothed"
                 ],
                 color="blue",
                 alpha=0.2,
@@ -464,7 +487,7 @@ for n_bins in [15, 20, 25]:
 
             ax.plot(
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_3d"
+                    "classical_corrected_3d_smoothed"
                 ],
                 c="purple",
                 ls=":",
@@ -474,10 +497,10 @@ for n_bins in [15, 20, 25]:
             ax.fill_between(
                 interp_outputs_test_df.loc[input_ind, int_version]["lag"],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_3d_lower"
+                    "classical_corrected_3d_lower_smoothed"
                 ],
                 interp_outputs_test_df.loc[input_ind, int_version][
-                    "classical_corrected_3d_upper"
+                    "classical_corrected_3d_upper_smoothed"
                 ],
                 color="purple",
                 alpha=0.2,
@@ -544,7 +567,8 @@ for n_bins in [15, 20, 25]:
         ax0.set_ylim(0, 100)
         plt.subplots_adjust(bottom=0.2)
         plt.savefig(
-            save_dir + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d.png"
+            save_dir
+            + f"sf_i_{input_ind}_classical_lint_corrected_b_{n_bins}_2d_SMOOTHED.png"
         )
 
 # Plotting 3D heatmaps
@@ -700,7 +724,7 @@ print("\nCurrent time:", datetime.now())
 #         25,
 #         15,
 #         20,
-#         25
+#         25,
 #     ],
 #     "Dimensions": [
 #         np.nan,
@@ -726,7 +750,7 @@ print("\nCurrent time:", datetime.now())
 #         # corrected results for various bins and dimensions
 #         12.96,  # 15
 #         12.92,  # 20
-#         12.89, #25
+#         12.89,  # 25
 #         11.27,  # 15
 #         11.13,  # 15
 #         11.07,  # 20
