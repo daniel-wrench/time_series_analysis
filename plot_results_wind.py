@@ -221,7 +221,7 @@ for n_bins in [10, 15, 20]:
                 error_percents_2d.append(error_percent_2d)
 
                 error_3d = (
-                    test_set_corrected.loc[(i, j), "classical_corrected_3d"]
+                    test_set_corrected.loc[(i, j), "classical_corrected_3d_smoothed"]
                     - df["classical"]
                 )
                 error_percent_3d = error_3d / df["classical"] * 100
