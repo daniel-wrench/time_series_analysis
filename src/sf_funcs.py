@@ -1,3 +1,4 @@
+import pickle
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
@@ -332,6 +333,57 @@ def plot_sample(
     # plt.show()
 
 
+# Load in each pickle file psp_dataframes_0X.pkl and concatenate them
+# into one big dataframe for each of the four dataframes
+
+
+def load_and_concatenate_dataframes(pickle_files):
+    concatenated_dataframes = {
+        "files_metadata": [],
+        "ints_metadata": [],
+        "ints": [],
+        "ints_gapped_metadata": [],
+        "ints_gapped": [],
+        "sfs": [],
+        "sfs_gapped": [],
+    }
+
+    for file in pickle_files:
+        with open(file, "rb") as f:
+            data = pickle.load(f)
+            for key in concatenated_dataframes.keys():
+                concatenated_dataframes[key].append(data[key])
+
+    for key in concatenated_dataframes.keys():
+        if (
+            key == "ints"
+        ):  # Ints is a list of list of pd.Series, not a list of dataframes
+            concatenated_dataframes[key] = concatenated_dataframes[key]
+        else:
+            concatenated_dataframes[key] = pd.concat(
+                concatenated_dataframes[key], ignore_index=True
+            )
+
+    # Access the concatenated DataFrames
+    files_metadata = concatenated_dataframes["files_metadata"]
+    ints_metadata = concatenated_dataframes["ints_metadata"]
+    ints = concatenated_dataframes["ints"]
+    ints_gapped_metadata = concatenated_dataframes["ints_gapped_metadata"]
+    ints_gapped = concatenated_dataframes["ints_gapped"]
+    sfs = concatenated_dataframes["sfs"]
+    sfs_gapped = concatenated_dataframes["sfs_gapped"]
+
+    return (
+        files_metadata,
+        ints_metadata,
+        ints,
+        ints_gapped_metadata,
+        ints_gapped,
+        sfs,
+        sfs_gapped,
+    )
+
+
 def plot_error_trend_line(
     other_outputs_df,
     estimator="sf_2",
@@ -351,17 +403,17 @@ def plot_error_trend_line(
     )
     median_error = other_outputs_df.groupby("lag")[estimator + "_pe"].median()
     mean_error = other_outputs_df.groupby("lag")[estimator + "_pe"].mean()
-    # plt.plot(median_error, color="g", lw=3, label="Median")
-    # plt.plot(mean_error, color="c", lw=3, label="Mean")
+    plt.plot(median_error, color="g", lw=2, label="Median")
+    plt.plot(mean_error, color="c", lw=2, label="Mean")
 
-    plt.annotate(
-        "MAPE = {0:.2f}".format(other_outputs_df[estimator + "_pe"].abs().mean()),
-        xy=(1, 1),
-        xycoords="axes fraction",
-        xytext=(0.1, 0.9),
-        textcoords="axes fraction",
-        c="black",
-    )
+    # plt.annotate(
+    #     "MAPE = {0:.2f}".format(other_outputs_df[estimator + "_pe"].abs().mean()),
+    #     xy=(1, 1),
+    #     xycoords="axes fraction",
+    #     xytext=(0.1, 0.9),
+    #     textcoords="axes fraction",
+    #     c="black",
+    # )
 
     cb = plt.colorbar()
     cb.set_label("% missing overall")
@@ -374,7 +426,7 @@ def plot_error_trend_line(
         plt.yscale("symlog", linthresh=1e2)
     plt.xlabel("Lag ($\\tau$)")
     plt.ylabel("% error")
-    plt.legend(loc="lower left")
+    plt.legend(loc="upper left")
     # plt.show()
 
 
@@ -451,6 +503,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
         # Currently saving midpoints of bins to lookup table - could change to edges
         "lag": [],
         missing_measure: [],
+        "n": [],
         "mpe": [],
         "mpe_sd": [],
         "pe_min": [],
@@ -460,6 +513,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
     xidx = np.digitize(x, xedges) - 1  # correcting for annoying 1-indexing
     yidx = np.digitize(y, yedges) - 1  # as above
     means = np.full((num_bins, num_bins), fill_value=np.nan)
+    counts = np.full((num_bins, num_bins), fill_value=np.nan)
     # upper = np.full((num_bins, num_bins), fill_value=np.nan)
     # lower = np.full((num_bins, num_bins), fill_value=np.nan)
     for i in range(num_bins):
@@ -469,7 +523,9 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
                 # means[i, j] = np.mean(y[(xidx == i) & (yidx == j)])
                 current_bin_vals = inputs["sf_2_pe"][(xidx == i) & (yidx == j)]
                 mpe = np.nanmean(current_bin_vals)
+                n = len(current_bin_vals)
                 means[i, j] = mpe
+                counts[i, j] = n
 
                 # Calculate standard deviation for the lookup table too
                 # / np.sqrt(
@@ -482,6 +538,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
                 # Save values at midpoint of each bin
                 data["lag"].append(0.5 * (xedges[i] + xedges[i + 1]))
                 data[missing_measure].append(0.5 * (yedges[j] + yedges[j + 1]))
+                data["n"].append(n)
                 data["mpe"].append(mpe)
                 data["mpe_sd"].append(np.nanstd(current_bin_vals))
                 data["pe_min"].append(np.nanmin(current_bin_vals))
@@ -494,7 +551,7 @@ def create_heatmap_lookup(inputs, missing_measure, num_bins=25, log=False):
     data["scaling_lower"] = 1 / (1 + data["pe_max"] / 100)
     data["scaling_upper"] = 1 / (1 + data["pe_min"] / 100)
 
-    return means, [xedges, yedges], data
+    return means, counts, [xedges, yedges], data
 
 
 def create_heatmap_lookup_3D(inputs, missing_measure, num_bins=25, log=False):
@@ -663,11 +720,11 @@ def compute_scaling(bad_output, var, heatmap_vals, external_test_set=False):
         bad_output.at[i, "scaling_lower"] = scaling_lower
         bad_output.at[i, "scaling_upper"] = scaling_upper
 
-    if external_test_set is False:
-        bad_output.loc[bad_output["sf_2_pe"] == 0, "scaling"] = (
-            1  # Catching rows where there is no error (only for repeated data),
-            # so scaling should be 1
-        )
+    # if external_test_set is False:
+    #     bad_output.loc[bad_output["sf_2_pe"] == 0, "scaling"] = (
+    #         1  # Catching rows where there is no error (only for repeated data),
+    #         # so scaling should be 1
+    #     )
 
     bad_output["sf_2_corrected_2d"] = bad_output["sf_2"] * bad_output["scaling"]
     bad_output["sf_2_lower_corrected_2d"] = (
@@ -752,7 +809,7 @@ def compute_scaling_3d(bad_output, var, heatmap_vals, smoothing_method="linear")
         bad_output.at[i, "scaling_lower"] = scaling_lower
         bad_output.at[i, "scaling_upper"] = scaling_upper
 
-    bad_output.loc[bad_output["sf_2_pe"] == 0, "scaling"] = 1  # Catching 0 errors
+    # bad_output.loc[bad_output["sf_2_pe"] == 0, "scaling"] = 1  # Catching 0 errors
 
     bad_output["sf_2_corrected_3d"] = bad_output["sf_2"] * bad_output["scaling"]
     bad_output["sf_2_lower_corrected_3d"] = (
